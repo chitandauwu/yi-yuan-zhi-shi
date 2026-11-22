@@ -1,0 +1,9 @@
+.openai/
+dist/
+fonts/bender.otf
+fonts/smiley-sans.woff2
+fonts/yard-song.woff2
+jianghan-landscape.jpg
+yard-views.jpg
+.DS_Store
+Thumbs.db
