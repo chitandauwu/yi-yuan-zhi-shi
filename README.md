@@ -15,4 +15,4 @@
 
 ## 静态部署
 
-仓库已内置 [`.github/workflows/deploy-pages.yml`](.github/workflows/deploy-pages.yml)，在 GitHub 仓库 `Settings -> Pages` 中将 Source 设为 **GitHub Actions**（或直接选择 `main` 分支根目录）即可自动发布上线。
+本项目面向 **Cloudflare Pages**（`https://yi-yuan-zhi-shi.pages.dev`）直接以仓库根目录 `/` 静态发布，无需构建命令。
