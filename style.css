@@ -82,7 +82,8 @@ button:focus-visible, canvas:focus-visible { outline:2px solid currentColor; out
 .exhibit.gnomon-focused .stage-hint,
 body:has(#season-guide[open]) .stage-hint,
 body:has(#food-inspect:not([hidden])) .stage-hint,
-body:has(#crop-inspect:not([hidden])) .stage-hint { opacity:0; }
+body:has(#crop-inspect:not([hidden])) .stage-hint,
+body:has(#sickle-inspect:not([hidden])) .stage-hint { opacity:0; }
 .exhibit.hud-hidden .guide-toggle { visibility:hidden; }
 .hud-dock {
   position:fixed; z-index:3; left:var(--hud-edge); bottom:var(--hud-bottom);
@@ -262,7 +263,7 @@ body:has(#crop-inspect:not([hidden])) .stage-hint { opacity:0; }
   background:var(--river);
 }
 .landscape { position:absolute; inset:0; width:100%; height:100%; pointer-events:none; }
-#yard-shadow, #yard-hotspots, #food-hotspots, #crop-hotspots { position:absolute; inset:0 0 50px; width:100%; height:calc(100% - 50px); pointer-events:none; overflow:visible; }
+#yard-shadow, #yard-hotspots, #food-hotspots, #crop-hotspots, #sickle-hotspots { position:absolute; inset:0 0 50px; width:100%; height:calc(100% - 50px); pointer-events:none; overflow:visible; }
 #plinth-shadow { fill:var(--plinth-shadow); opacity:.29; filter:blur(8px); transform:translate(7px,9px); }
 .landscape-sun { opacity:.75; }
 .landscape-mist { opacity:var(--mist-opacity); }
@@ -450,7 +451,7 @@ body[data-season="winter"] .landscape-sun { visibility:hidden; }
   .interlude-verse::before { margin:0 auto 10px; }
 }
 @media (min-width:721px) and (max-width:1150px) {
-  #yard, #yard-compatibility, #yard-shadow, #yard-hotspots, #food-hotspots, #crop-hotspots { left:90px; width:calc(100% - 90px); }
+  #yard, #yard-compatibility, #yard-shadow, #yard-hotspots, #food-hotspots, #crop-hotspots, #sickle-hotspots { left:90px; width:calc(100% - 90px); }
 }
 @media (max-height:680px) and (min-width:721px) {
   :root { --hud-top:14px; --hud-bottom:14px; --ruler-step:20px; }
@@ -482,7 +483,7 @@ body[data-season="winter"] .landscape-sun { visibility:hidden; }
   .yard-links svg { width:16px; height:16px; }
   .season-note { align-self:end; padding-top:9px; }
   .season-note::before { top:17px; }
-  #yard, #yard-compatibility, #yard-shadow, #yard-hotspots, #food-hotspots, #crop-hotspots { inset:240px 0 90px; height:calc(100% - 330px); }
+  #yard, #yard-compatibility, #yard-shadow, #yard-hotspots, #food-hotspots, #crop-hotspots, #sickle-hotspots { inset:240px 0 90px; height:calc(100% - 330px); }
   .gnomon-inspect { bottom:calc(var(--hud-bottom) + 53px); }
   .hud-dock { width:auto; grid-auto-flow:column; align-items:center; gap:4px; }
   .hud-toggle { width:40px; height:44px; }
@@ -523,7 +524,7 @@ body[data-season="winter"] .landscape-sun { visibility:hidden; }
 }
 #food-target:hover::after, #food-target:focus-visible::after { opacity:.92; }
 #food-target:hover, #food-target:focus-visible { background:#ffe3a014; outline:none; }
-.food-inspect { width:min(420px,calc(100% - 2 * var(--hud-edge))); }
+.food-inspect { width:min(420px,calc(100% - 2 * var(--hud-edge))); padding-bottom:22px; }
 .food-kicker {
   margin:10px 0 0; font-size:11px; letter-spacing:.24em; color:#d4b982cc;
 }
@@ -553,3 +554,39 @@ body[data-season="winter"] .landscape-sun { visibility:hidden; }
 /* 背景音乐按钮 */
 .sound-wave { opacity:.22; transition:opacity .2s ease; }
 #sound-toggle[aria-pressed="true"] .sound-wave { opacity:1; }
+
+/* 抢收按钮 */
+#harvest-start {
+  display:inline-flex; align-items:center; justify-content:center; gap:8px; margin-top:16px;
+  padding:11px 26px; border:1px solid #ffe6b0; border-radius:999px;
+  background:linear-gradient(180deg,#ffe0a0,#f6c877); color:#2a2317;
+  font:600 14.5px/1 var(--body-font); letter-spacing:.16em; cursor:pointer;
+  width:auto; height:auto; min-width:0; white-space:nowrap; align-self:flex-start;
+  box-shadow:0 4px 14px #f6c87740, inset 0 1px 0 #fff8e0; margin-bottom:2px;
+  transition:transform .16s ease, box-shadow .2s ease, filter .2s ease;
+}
+#harvest-start:hover { filter:brightness(1.06); transform:translateY(-1px); box-shadow:0 6px 18px #f6c87755, inset 0 1px 0 #fffdf2; }
+#harvest-start:active { transform:translateY(0); filter:brightness(.98); }
+#harvest-start:focus-visible { outline:2px solid var(--hud-gold); outline-offset:2px; }
+
+/* 抢收模式：画面外框提示 */
+body.harvest-mode .stage::after {
+  content:"抢收模式 · 点田里的稻子收割"; position:absolute; left:50%; top:26px;
+  transform:translateX(-50%); padding:6px 16px; border-radius:999px;
+  background:#12201fd9; border:1px solid #ffdf9d66; color:#ffe9bd;
+  font:500 12px/1 var(--body-font); letter-spacing:.16em; pointer-events:none; z-index:4;
+}
+#sickle-hotspots { pointer-events:none; overflow:visible; --sickle-stroke:1.2px; opacity:.95; transition:opacity .22s ease; }
+#sickle-outline, #sickle-outline-edge { fill:none; stroke-linejoin:round; stroke-linecap:round; }
+#sickle-outline-edge { stroke:#352419; stroke-width:calc(var(--sickle-stroke) + 1.2px); opacity:.8; }
+#sickle-outline { stroke:#ffe3a0; stroke-width:var(--sickle-stroke); }
+.stage:has(#sickle-target:hover,#sickle-target:focus-visible) #sickle-hotspots { --sickle-stroke:1.9px; opacity:1; }
+#sickle-target { position:absolute; padding:0; border:0; background:transparent; cursor:pointer; border-radius:8px; }
+
+
+
+
+
+
+
+

@@ -515,6 +515,7 @@
 
   let cropHulls = [];
   let cropCentres = [];
+let cropIndices = [];
 
   function pointInHull(px, py, hull) {
     if (!hull || hull.length < 3) return false;
@@ -607,7 +608,25 @@
     return top.concat(bottom.reverse());
   }
 
+  // 鼠标下面是哪一株（返回作物下标，没有则 -1）
+  function plantAt(event) {
+    const rect = canvas.getBoundingClientRect();
+    const px = event.clientX - rect.left, py = event.clientY - rect.top;
+    for (let k = cropCentres.length - 1; k >= 0; k--) {
+      const [cx, cy, r] = cropCentres[k];
+      if (Math.hypot(px - cx, py - cy) <= r + 14) return cropIndices[k];
+    }
+    return -1;
+  }
+
   function updateCropProjection(projection) {
+    if (document.body.classList.contains("harvest-mode")) {
+      cropOutlines.textContent = "";
+      cropLayer.toggleAttribute("hidden", true);
+      if (cropTarget) cropTarget.hidden = true;
+      cropHulls = []; cropCentres = []; cropIndices = [];
+      return;
+    }
     if (!projection) {
       cropLayer.toggleAttribute("hidden", true);
       if (cropTarget) cropTarget.hidden = true;
@@ -615,6 +634,7 @@
     }
     cropHulls = [];
     cropCentres = [];
+    cropIndices = projection.indices ? projection.indices.slice() : [];
     cropOutlines.textContent = "";
     if (document.body.dataset.season === "rain") {
       const silhouette = silhouettePath(scene?.treeSilhouette(), 1.5);
@@ -707,6 +727,94 @@
 
   showTerm("grain");
 
+  // —— 门口的镰刀：描边 → 拉近 → 抢收 ——
+  const sickleLayer = document.querySelector("#sickle-hotspots");
+  const sickleOutline = document.querySelector("#sickle-outline");
+  const sickleOutlineEdge = document.querySelector("#sickle-outline-edge");
+  const sickleTarget = document.querySelector("#sickle-target");
+  const sicklePanel = document.querySelector("#sickle-inspect");
+  const harvestButton = document.querySelector("#harvest-start");
+
+  function updateSickleProjection(projection) {
+    if (!sickleLayer) return;
+    if (!projection) {
+      sickleLayer.toggleAttribute("hidden", true);
+      if (sickleTarget) sickleTarget.hidden = true;
+      return;
+    }
+    const silhouette = silhouettePath(scene?.sickleSilhouette(), 1.4);
+    if (silhouette) {
+      sickleOutline.setAttribute("d", silhouette);
+      sickleOutlineEdge.setAttribute("d", silhouette);
+    }
+    sickleLayer.toggleAttribute("hidden", false);
+    const xs = projection.outline.map(([x]) => x);
+    const ys = projection.outline.map(([, y]) => y);
+    const left = Math.min(...xs), top = Math.min(...ys);
+    if (sickleTarget) {
+      sickleTarget.hidden = false;
+      Object.assign(sickleTarget.style, {
+        left: (left - 10) + "px",
+        top: (top - 8) + "px",
+        width: (Math.max(...xs) - left + 20) + "px",
+        height: (Math.max(...ys) - top + 16) + "px"
+      });
+    }
+  }
+
+  function openSickle() {
+    if (!sicklePanel) return;
+    closeFood();
+    closeCrop();
+    sicklePanel.hidden = false;
+    if (harvestButton) {
+      harvestButton.textContent = document.body.classList.contains("harvest-mode") ? "结束抢收" : "开始抢收";
+    }
+    sickleTarget.setAttribute("aria-expanded", "true");
+    scene?.focusSickle();
+  }
+
+  function closeSickle() {
+    if (!sicklePanel || sicklePanel.hidden) return;
+    sicklePanel.hidden = true;
+    sickleTarget?.setAttribute("aria-expanded", "false");
+    scene?.releaseSickle();
+  }
+
+  sickleTarget?.addEventListener("click", () => {
+    sicklePanel.hidden ? openSickle() : closeSickle();
+  });
+  document.querySelector("#sickle-return")?.addEventListener("click", closeSickle);
+  document.addEventListener("keydown", event => {
+    if (event.key !== "Escape") return;
+    if (document.body.classList.contains("harvest-mode")) setHarvestMode(false);
+    else closeSickle();
+  });
+
+  function setHarvestMode(on) {
+    document.body.classList.toggle("harvest-mode", on);
+    scene?.setHarvestMode(on);
+    // 抢收时不再显示作物圈：整块田都能割，圈反而干扰
+    if (on) {
+      cropOutlines.textContent = "";
+      cropLayer.toggleAttribute("hidden", true);
+      if (cropTarget) cropTarget.hidden = true;
+      cropHulls = [];
+      cropCentres = [];
+      cropIndices = [];
+    } else if (scene) {
+      updateCropProjection(scene.cropProjection());
+    }
+  }
+
+  harvestButton?.addEventListener("click", () => {
+    const on = !document.body.classList.contains("harvest-mode");
+    closeSickle();
+    setHarvestMode(on);
+  });
+
+  if (scene) scene.onSickleView = updateSickleProjection;
+
   if (!scene) return;
 
   function openPoleInspection() {
@@ -754,7 +862,8 @@
     if ((event.button !== 0 && event.button !== 1 && event.button !== 2) || points.size === 2) return;
     if (event.button === 1) event.preventDefault();
     const poleClick=points.size===0 && event.button===0 && hitsPole(event);
-    const cropClick=!poleClick && points.size===0 && event.button===0 && hitsCrop(event);
+    const cropClick=!poleClick && points.size===0 && event.button===0 &&
+      (hitsCrop(event) || document.body.classList.contains("harvest-mode"));
     for (const point of points.values()) point.poleClick=false;
     points.set(event.pointerId,{x:event.clientX,y:event.clientY,pan:event.button!==0,poleClick,cropClick});
     canvas.setPointerCapture(event.pointerId);
@@ -812,7 +921,14 @@
       const still = Math.hypot(event.clientX-point.x,event.clientY-point.y)<5;
       if (type==="pointerup" && still) {
         if (point.poleClick && hitsPole(event)) openPoleInspection();
-        else if (point.cropClick && hitsCrop(event)) openCrop();
+        else if (point.cropClick) {
+          if (document.body.classList.contains("harvest-mode")) {
+            const rect = canvas.getBoundingClientRect();
+            const index = scene ? scene.plantAtScreen(event.clientX - rect.left, event.clientY - rect.top, 30) : -1;
+            if (index >= 0) { scene.harvestPlant(index); return; }
+          }
+          if (hitsCrop(event)) openCrop();
+        }
       }
     });
   }

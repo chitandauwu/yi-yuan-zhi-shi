@@ -491,6 +491,7 @@
 
   // 记录本季画出来的每一株作物，描边时只用这些点求凸包
   let cropSpots = [];
+  let cropRanges = [];
   let treeSpots = [];
 
   // 每季只框一小块：夏秋是田角的一畦秧稻，冬天是那块还绿着的菜畦
@@ -567,12 +568,14 @@
         const seed=row*41+i, height=tall ? .70 : wet ? .37 : .12;
         const stemX=px+variation(seed)*.13-.065;
         const tones=tall ? ["c4932e","e0b640","f4d15a"] : wet ? ["348a36","50ad44","82d150"] : ["b39262","c9aa76","9c7f58"];
+        const plantStart = Math.round(mesh.data.length / 9);
         for (let b=-2; b<=2; b++) {
           const length=height*(.72+variation(seed+b)*.32);
           blade(mesh,stemX+b*.026,pz+(b%2)*.077,length,b*height*.20,tones[(b+seed+8)%3]);
         }
         if (tall && i%3!==1) mesh.beam([stemX,.71,pz],[stemX+.18,.94,pz+.05],.044,.036,"fae074");
         cropSpots.push([stemX, pz, height]);
+        cropRanges.push([plantStart, Math.round(mesh.data.length / 9)]);
         if (wet && (row+i)%3===0) {
           mesh.box(stemX+.24,.263,pz+.22,.28+variation(seed)*.26,.004,.028,"a99a7c");
         }
@@ -686,6 +689,40 @@
     }
     mesh.box(x,base+.019,z,.19,.038,.19,"a89b81","88785d");
     mesh.beam([x,base+.038,z],[x,base+height,z],gnomon.radius*2,gnomon.radius*2,"80613f");
+  }
+
+  // —— 门口墙边靠着的镰刀：抢收用的道具 ——
+  const sickleAt = { x: 2.92, z: -.24 };
+
+  function sickleProp(mesh) {
+    const { x, z } = sickleAt;
+    const g = .345;
+    const topX = x + .10, topY = g + .86, topZ = z + .04;
+    // 木柄：下粗上细，斜靠墙边
+    mesh.beam([x, g, z], [topX, topY, topZ], .075, .066, "6b4626");
+    mesh.beam([x, g + .02, z], [x + .01, g + .20, z + .005], .098, .090, "51351e");
+    mesh.beam([topX - .02, topY - .10, topZ], [topX, topY, topZ], .058, .052, "9a6b3a");
+    // 刃根的铁箍
+    mesh.box(topX, topY - .05, topZ + .01, .075, .075, .075, "8d939a", "71777d");
+    // 刀刃：内半径小、外半径大的一段弯月，用一圈四边形拼出来
+    const hub = [topX + .02, topY - .03, topZ + .02];
+    const steps = 9, R = .46, r = .30, from = -.42, sweep = 2.15;
+    const at = (radius, angle) => [
+      hub[0] + Math.cos(angle) * radius,
+      hub[1] + Math.sin(angle) * radius * .52,
+      hub[2] + .035
+    ];
+    for (let i = 0; i < steps; i++) {
+      const a0 = from + sweep * i / steps, a1 = from + sweep * (i + 1) / steps;
+      const o0 = at(R, a0), o1 = at(R, a1), i0 = at(r, a0), i1 = at(r, a1);
+      const shade = i < steps - 1 ? (i % 2 ? "9aa3ac" : "c3cad2") : "dfe6ec";
+      mesh.face([o0, o1, i1, i0], shade);
+      mesh.face([o0, i0, i1, o1], "6f767d");
+    }
+    // 刀尖
+    const tipOuter = at(R, from + sweep), tipInner = at(r, from + sweep);
+    mesh.face([tipOuter, tipInner, [hub[0] + Math.cos(from + sweep + .18) * .33,
+      hub[1] + Math.sin(from + sweep + .18) * .33 * .52, hub[2] + .035]], "f2f6f9");
   }
 
   // —— 门口那张食桌：桌面一张、四条腿，四季换一样吃食 ——
@@ -1190,9 +1227,9 @@
 
   function writeFarmerQuad(data, pose, project, alpha=1) {
     // The half-texel inset confines filtering to the current 128 px frame.
-    const edge = .5/512, tile = .25;
-    const left = pose.frame*tile+edge, right = (pose.frame+1)*tile-edge;
-    const top = pose.row*tile+edge, bottom = (pose.row+1)*tile-edge;
+    const edge = .5/512, tileU = .25, tileV = .2;
+    const left = pose.frame*tileU+edge, right = (pose.frame+1)*tileU-edge;
+    const top = pose.row*tileV+edge, bottom = (pose.row+1)*tileV-edge;
     const nearU = pose.flip ? right : left, farU = pose.flip ? left : right;
     const makeVertex = (x,y,u,v) => [...project(x,y),0,1,alpha,u,v,0];
     const vertices = [
@@ -1200,6 +1237,24 @@
       makeVertex(68,-14,farU,bottom),makeVertex(-60,-14,nearU,bottom)
     ];
     for (const [index,corner] of [0,1,2,0,2,3].entries()) data.set(vertices[corner],index*9);
+  }
+
+  // 农夫手里的小镰刀：做在人物轮廓外侧，免得被贴图挡住
+  function handSickle(mesh, x, y, z, flip) {
+    const dir = flip ? -1 : 1;
+    const hx = x - dir * .02, hz = z + .10;
+    // 木柄：从手边往外上方伸
+    mesh.beam([hx, y - .10, hz], [hx + dir * .26, y + .30, hz + .02], .040, .036, "6b4626");
+    mesh.box(hx + dir * .01, y - .02, hz, .045, .05, .045, "51351e", "442c19");
+    // 刃：从柄头折回来一道弯钩
+    const hub = [hx + dir * .26, y + .30, hz + .02];
+    const at = (rad, a) => [hub[0] + dir * Math.cos(a) * rad, hub[1] + Math.sin(a) * rad * .86, hub[2] + .015];
+    for (let i = 0; i < 5; i++) {
+      const a0 = -.40 + i * .44, a1 = a0 + .44, R = .27, r = .165;
+      const o0 = at(R, a0), o1 = at(R, a1), i0 = at(r, a0), i1 = at(r, a1);
+      mesh.face([o0, o1, i1, i0], i % 2 ? "c6cdd4" : "e6ecf2");
+      mesh.face([o0, i0, i1, o1], "7a8189");
+    }
   }
 
   function farmerLeafSweep(mesh,pose,time) {
@@ -1903,6 +1958,27 @@
       this.cameraMode = "glide";
       this.wakeCamera();
     }
+    // 割掉一株：顶点挪到画外，位置记下来（秸秆在 act 里画）
+    harvestPlant(index) {
+      const range = cropRanges[index];
+      const spot = cropSpots[index];
+      if (!range || !spot || !this.world || !this.world.data) return false;
+      const data = this.world.data;
+      for (let v = range[0]; v < range[1]; v++) {
+        const o = v * 9;
+        data[o + 1] = -9999;
+      }
+      this.uploadGpuBuffer(this.world, false);
+      if (!this.harvested) this.harvested = [];
+      if (!this.harvestedIndices) this.harvestedIndices = new Set();
+      this.harvestedIndices.add(index);
+      this.harvested.push([spot[0], spot[1]]);
+      this.harvestSwing = { x: spot[0], z: spot[1], start: this.sceneTime || 0 };
+      this.render();
+      if (this.motion) this.queueFrame();
+      return true;
+    }
+
     // 多数采样点被挡住时，整条描边就别画了
     mostlyHidden(points, skip) {
       if (!this.landData || !this.cameraMatrix) return false;
@@ -1938,6 +2014,66 @@
     foodSilhouette() { return this.outlineTriangles(this.foodRange); }
     treeSilhouette() { return this.outlineTriangles(this.treeRange); }
 
+    sickleSilhouette() { return this.outlineTriangles(this.sickleRange); }
+
+    sickleProjection() {
+      const flat = this.sickleSilhouette();
+      if (!flat) return null;
+      const points = [];
+      for (let i = 0; i < flat.length; i += 2) points.push([flat[i], flat[i + 1]]);
+      if (points.every(([x]) => x < 0) || points.every(([x]) => x > this.viewWidth)) return null;
+      return { outline: outlineHull(points) };
+    }
+
+    focusSickle() {
+      if (this.sickleView) return;
+      const base = this.targetView || this.currentView();
+      this.sickleView = {...base};
+      this.moveView({
+        yaw: this.yaw + shortestAngleDelta(this.yaw, base.yaw),
+        pitch: around(.46,.68,base.pitch),
+        zoom: 4.4,
+        panX: sickleAt.x - homeView.pivot[0],
+        panZ: sickleAt.z - homeView.pivot[2],
+        pivotY: .62
+      });
+    }
+    releaseSickle() {
+      if (!this.sickleView) return;
+      const target = this.sickleView;
+      this.sickleView = null;
+      this.moveView({...target, yaw: this.yaw + shortestAngleDelta(this.yaw, target.yaw)});
+    }
+
+    // 进入/退出抢收：镰刀从门口消失，农夫手里多一把
+    setHarvestMode(on) {
+      this.harvestMode = Boolean(on);
+      if (this.harvestMode) {
+        this.harvestStance = null;
+        this.harvestSwing = null;
+      }
+      this.render();
+      if (this.motion) this.queueFrame();
+    }
+
+    // 屏幕坐标命中的那一株（抢收模式下点任意稻子）
+    plantAtScreen(px, py, radius = 26) {
+      const m = this.cameraMatrix;
+      if (!m || !this.viewWidth) return -1;
+      let best = -1, bestDistance = radius;
+      const data = this.landData;
+      for (let index = 0; index < cropSpots.length; index++) {
+        if (this.harvestedIndices && this.harvestedIndices.has(index)) continue;
+        const [wx, wz] = cropSpots[index];
+        const wy = .52;
+        const sx = (wx * m[0] + wy * m[4] + wz * m[8] + m[12] + 1) * this.viewWidth / 2;
+        const sy = (1 - wx * m[1] - wy * m[5] - wz * m[9] - m[13]) * this.viewHeight / 2;
+        const distance = Math.hypot(px - sx, py - sy);
+        if (distance < bestDistance) { bestDistance = distance; best = index; }
+      }
+      return best;
+    }
+
     cropProjection() {
       const m = this.cameraMatrix;
       if (!m || !this.viewWidth) return null;
@@ -1971,9 +2107,11 @@
       } else {
         // 作物：一株一个椭圆
         const box = CROP_BOX[this.term] || CROP_BOX.grain;
-        for (const [px, pz, height] of cropSpots) {
+        for (let index = 0; index < cropSpots.length; index++) {
+          const [px, pz, height] = cropSpots[index];
           if (px < box.left - .2 || px > box.right + .2) continue;
           if (pz < box.near - .2 || pz > box.far + .2) continue;
+          if (this.harvestedIndices && this.harvestedIndices.has(index)) continue;
           if (this.isHidden(px, .30 + height + .06, pz)) continue;
           const base = project(px, .30, pz);
           const side = project(px + .14, .30, pz + .07);
@@ -1981,7 +2119,7 @@
           const radius = Math.hypot(side[0] - base[0], side[1] - base[1]);
           const centreY = (base[1] + top[1]) / 2;
           const radiusY = Math.max(radius, Math.abs(top[1] - base[1]) * .58);
-          items.push({ ellipse: [base[0], centreY, radius, radiusY] });
+          items.push({ ellipse: [base[0], centreY, radius, radiusY], index });
         }
       }
       if (!items.length) return null;
@@ -1994,7 +2132,7 @@
           all.push(...item);
         }
       }
-      return { items, all };
+      return { items, all, indices: items.map(item => item.index) };
     }
     focusCrop() {
       if (this.cropView) return;
@@ -2289,7 +2427,11 @@
       this.state = seasonColors[term];
       const mesh = new Mesh();
       cropSpots = [];
+      cropRanges = [];
       treeSpots = [];
+      this.harvested = [];
+      this.harvestedIndices = new Set();
+      this.harvestSwing = null;
       platform(mesh,this.state);
       field(mesh,term,this.state);
       farmhouse(mesh,this.state,term);
@@ -2298,6 +2440,14 @@
     const foodStart = mesh.data.length / 9;
     foodTable(mesh,term);
     this.foodRange = [foodStart, mesh.data.length / 9];
+    // 镰刀只在秋天的院子里出现
+    if (term === "dew") {
+      const sickleStart = mesh.data.length / 9;
+      sickleProp(mesh);
+      this.sickleRange = [sickleStart, mesh.data.length / 9];
+    } else {
+      this.sickleRange = null;
+    }
       porchSupplies(mesh,term);
       waterWell(mesh);
       bambooFence(mesh,-1.62,2.01,15.20);
@@ -2344,7 +2494,62 @@
       const basePower = this.shadows.practicalPower;
       this.lampPower[0] = basePower[0] * (1 + .05 * Math.sin(time * 3.1));
       this.lampPower[1] = basePower[1] * (1 + .05 * Math.sin(time * 2.7 + 1.4));
-      if (this.term==="dew") farmerLeafSweep(mesh,this.farmer,farmerTime);
+      // 抢收模式下，门口那把镰刀收起来（在农夫手里）
+      if (this.harvestMode && this.sickleRange && this.world && this.world.data) {
+        const data = this.world.data;
+        let touched = false;
+        for (let v = this.sickleRange[0]; v < this.sickleRange[1]; v++) {
+          if (data[v * 9 + 1] > -9000) { data[v * 9 + 1] = -9999; touched = true; }
+        }
+        if (touched) this.uploadGpuBuffer(this.world, false);
+      }
+      // 收割：农夫走过去、挥镰、留一茬秸秆
+      const swing = this.harvestSwing;
+      if (swing) {
+        const t = time - swing.start;
+        if (t > 2.6) {
+          this.harvestSwing = null;
+          this.harvestStance = [swing.x, swing.z];
+        }
+        else {
+          const f = this.farmer;
+          const walk = Math.min(1, t / .6);
+          const ease = walk * walk * (3 - 2 * walk);
+          const from = this.harvestStance || [f.x, f.z];
+          f.flip = swing.x < from[0];
+          f.x = from[0] + (swing.x - from[0]) * ease;
+          f.z = from[1] + (swing.z - from[1]) * ease;
+          f.y = shallowWater.height + .02;
+          f.lift = 0;
+          f.row = 4;
+          if (t > .6) {
+            const phase = (t - .6) * 3.4;
+            f.frame = [0,1,2,3][Math.floor(phase) % 4];
+            f.stretch = .96 + Math.sin(phase * 3.1) * .018;
+          } else {
+            f.frame = 0;
+          }
+        }
+      }
+      for (const [hx, hz] of this.harvested || []) {
+        for (let k = -3; k <= 3; k++) {
+          blade(mesh, hx + k * .034, hz + Math.abs(k) * .024, .13 + variation((k + 4) * 9) * .06,
+            k * .10, k % 2 ? "c9a86a" : "dcbe80");
+        }
+        mesh.box(hx, .263, hz, .13, .012, .13, "8f7a4e", "7c6a44");
+      }
+      if (this.harvestMode && this.farmer) {
+      }
+      if (this.harvestMode && this.harvestStance && !this.harvestSwing && this.farmer) {
+        const [sx, sz] = this.harvestStance;
+        const f = this.farmer;
+        f.x = sx; f.z = sz; f.y = shallowWater.height + .02;
+        f.lift = 0;
+        f.row = 4;
+        f.frame = [0,1,2,1][Math.floor(farmerTime * 4) % 4];
+        f.stretch = .97 + Math.sin(farmerTime * 3.4) * .015;
+      }
+      if (this.term==="dew" && !this.harvestMode) farmerLeafSweep(mesh,this.farmer,farmerTime);
       chickens(mesh,this.term,time);
       if (this.term === "rain") {
         driftingPetals(mesh,time);
@@ -2528,6 +2733,10 @@
       }
       const matrix=this.cameraMatrix;
       if (changedView && this.onView) this.onView();
+      if (this.onSickleView && (changedView || this.sickleGeometry!==this.landData)) {
+        this.sickleGeometry=this.landData;
+        this.onSickleView(this.sickleProjection());
+      }
       if (this.onCropView && (changedView || this.cropGeometry!==this.landData)) {
         this.cropGeometry=this.landData;
         this.onCropView(this.cropProjection());
