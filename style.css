@@ -263,7 +263,7 @@ body:has(#sickle-inspect:not([hidden])) .stage-hint { opacity:0; }
   background:var(--river);
 }
 .landscape { position:absolute; inset:0; width:100%; height:100%; pointer-events:none; }
-#yard-shadow, #yard-hotspots, #food-hotspots, #crop-hotspots, #sickle-hotspots { position:absolute; inset:0 0 50px; width:100%; height:calc(100% - 50px); pointer-events:none; overflow:visible; }
+#yard-shadow, #yard-hotspots, #food-hotspots, #crop-hotspots, #sickle-hotspots, #broom-hotspots, #fire-hotspots { position:absolute; inset:0 0 50px; width:100%; height:calc(100% - 50px); pointer-events:none; overflow:visible; }
 #plinth-shadow { fill:var(--plinth-shadow); opacity:.29; filter:blur(8px); transform:translate(7px,9px); }
 .landscape-sun { opacity:.75; }
 .landscape-mist { opacity:var(--mist-opacity); }
@@ -451,7 +451,7 @@ body[data-season="winter"] .landscape-sun { visibility:hidden; }
   .interlude-verse::before { margin:0 auto 10px; }
 }
 @media (min-width:721px) and (max-width:1150px) {
-  #yard, #yard-compatibility, #yard-shadow, #yard-hotspots, #food-hotspots, #crop-hotspots, #sickle-hotspots { left:90px; width:calc(100% - 90px); }
+  #yard, #yard-compatibility, #yard-shadow, #yard-hotspots, #food-hotspots, #crop-hotspots, #sickle-hotspots, #broom-hotspots, #fire-hotspots { left:90px; width:calc(100% - 90px); }
 }
 @media (max-height:680px) and (min-width:721px) {
   :root { --hud-top:14px; --hud-bottom:14px; --ruler-step:20px; }
@@ -483,7 +483,7 @@ body[data-season="winter"] .landscape-sun { visibility:hidden; }
   .yard-links svg { width:16px; height:16px; }
   .season-note { align-self:end; padding-top:9px; }
   .season-note::before { top:17px; }
-  #yard, #yard-compatibility, #yard-shadow, #yard-hotspots, #food-hotspots, #crop-hotspots, #sickle-hotspots { inset:240px 0 90px; height:calc(100% - 330px); }
+  #yard, #yard-compatibility, #yard-shadow, #yard-hotspots, #food-hotspots, #crop-hotspots, #sickle-hotspots, #broom-hotspots, #fire-hotspots { inset:240px 0 90px; height:calc(100% - 330px); }
   .gnomon-inspect { bottom:calc(var(--hud-bottom) + 53px); }
   .hud-dock { width:auto; grid-auto-flow:column; align-items:center; gap:4px; }
   .hud-toggle { width:40px; height:44px; }
@@ -583,10 +583,53 @@ body.harvest-mode .stage::after {
 .stage:has(#sickle-target:hover,#sickle-target:focus-visible) #sickle-hotspots { --sickle-stroke:1.9px; opacity:1; }
 #sickle-target { position:absolute; padding:0; border:0; background:transparent; cursor:pointer; border-radius:8px; }
 
+/* 冬天 · 扫把 */
+#broom-hotspots { pointer-events:none; overflow:visible; --broom-stroke:1.6px; opacity:.95; }
+#broom-outline, #broom-outline-edge { fill:none; stroke-linejoin:round; stroke-linecap:round; }
+#broom-outline-edge { stroke:#352419; stroke-width:calc(var(--broom-stroke) + 1.4px); opacity:.8; }
+#broom-outline { stroke:#ffe3a0; stroke-width:var(--broom-stroke); }
+.stage:has(#broom-target:hover,#broom-target:focus-visible) #broom-hotspots { --broom-stroke:2.4px; opacity:1; }
+#broom-target { position:absolute; padding:0; border:0; background:transparent; cursor:pointer; border-radius:8px; }
 
+#sweep-start {
+  display:inline-flex; align-items:center; justify-content:center; gap:8px; margin-top:16px;
+  padding:11px 26px; border:1px solid #cfe4f2; border-radius:999px;
+  background:linear-gradient(180deg,#e8f3fb,#bcd9ee); color:#1d2b36;
+  font:600 14.5px/1 var(--body-font); letter-spacing:.16em; cursor:pointer;
+  width:auto; height:auto; min-width:0; white-space:nowrap; align-self:flex-start; margin-bottom:2px;
+  box-shadow:0 4px 14px #bcd9ee40, inset 0 1px 0 #ffffff;
+  transition:transform .16s ease, box-shadow .2s ease, filter .2s ease;
+}
+#sweep-start:hover { filter:brightness(1.05); transform:translateY(-1px); }
+#sweep-start:active { transform:translateY(0); filter:brightness(.98); }
+#sweep-start:focus-visible { outline:2px solid var(--hud-gold); outline-offset:2px; }
 
+body.sweep-mode .stage::after {
+  content:"扫雪模式 · 点院子里的雪扫开"; position:absolute; left:50%; top:26px;
+  transform:translateX(-50%); padding:6px 16px; border-radius:999px;
+  background:#12201fd9; border:1px solid #cfe4f266; color:#e6f2fb;
+  font:500 12px/1 var(--body-font); letter-spacing:.16em; pointer-events:none; z-index:4;
+}
+body:has(#broom-inspect:not([hidden])) .stage-hint { opacity:0; }
 
+/* 火塘 */
+#fire-hotspots { pointer-events:none; overflow:visible; --fire-stroke:2px; opacity:.9; }
+#fire-outline, #fire-outline-edge { fill:none; stroke-linejoin:round; stroke-linecap:round; }
+#fire-outline-edge { stroke:#3a1d10; stroke-width:calc(var(--fire-stroke) + 1.6px); opacity:.8; }
+#fire-outline { stroke:#ffb765; stroke-width:var(--fire-stroke); }
+.stage:has(#fire-target:hover,#fire-target:focus-visible) #fire-hotspots { --fire-stroke:3px; opacity:1; }
+#fire-target { position:absolute; padding:0; border:0; background:transparent; cursor:pointer; border-radius:12px; }
 
-
-
-
+#roast-start {
+  display:inline-flex; align-items:center; justify-content:center; gap:8px; margin-top:16px;
+  padding:11px 26px; border:1px solid #ffcf9a; border-radius:999px;
+  background:linear-gradient(180deg,#ffcf9a,#f09a52); color:#2b1a0c;
+  font:600 14.5px/1 var(--body-font); letter-spacing:.16em; cursor:pointer;
+  width:auto; height:auto; min-width:0; white-space:nowrap; align-self:flex-start; margin-bottom:2px;
+  box-shadow:0 4px 16px #f09a5240, inset 0 1px 0 #fff1dc;
+  transition:transform .16s ease, box-shadow .2s ease, filter .2s ease;
+}
+#roast-start:hover { filter:brightness(1.05); transform:translateY(-1px); }
+#roast-start:active { transform:translateY(0); filter:brightness(.98); }
+#roast-start:focus-visible { outline:2px solid var(--hud-gold); outline-offset:2px; }
+body:has(#fire-inspect:not([hidden])) .stage-hint { opacity:0; }
