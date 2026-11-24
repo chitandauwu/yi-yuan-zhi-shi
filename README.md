@@ -16,3 +16,9 @@
 ## 静态部署
 
 本项目面向 **Cloudflare Pages**（`https://yi-yuan-zhi-shi.pages.dev`）直接以仓库根目录 `/` 静态发布，无需构建命令。
+
+## 版本与协作
+
+- 日常变更记录在 Git 提交里。阶段性交付用带说明的 Git Tag 标记，例如 `v0.6`。版本快照可在仓库的 Tags 页面查看，GitHub Releases 保持空置。
+- `main` 用于维护可部署版本。协作者从 `main` 建短分支，推送分支后开 Pull Request，说明改动和验证方式。涉及画面或交互时，可附截图或 Cloudflare Pages 预览链接供合并前检查。
+- 合并后如果需要撤回改动，用 `git revert` 保留撤回记录。已共享的 `main` 历史和版本标签避免强制覆盖。
