@@ -1,4 +1,4 @@
-@font-face {
+﻿@font-face {
   font-family:"Yard WenKai";
   src:url("fonts/yard-wenkai.woff2") format("woff2");
   font-weight:500;
@@ -78,9 +78,11 @@ button:focus-visible, canvas:focus-visible { outline:2px solid currentColor; out
 }
 .exhibit.hud-hidden::before { content:none; }
 .exhibit.hud-hidden :is(.side-panel,.stage-tools,.stage-hint,.renderer-message,.season-interlude) { display:none; }
-.exhibit.hud-hidden :is(#yard-hotspots,#gnomon-target,.gnomon-inspect) { display:none; }
+.exhibit.hud-hidden :is(#yard-hotspots,#food-hotspots,#crop-hotspots,#gnomon-target,#food-target,#crop-target,.gnomon-inspect,.food-inspect) { display:none; }
 .exhibit.gnomon-focused .stage-hint,
-body:has(#season-guide[open]) .stage-hint { opacity:0; }
+body:has(#season-guide[open]) .stage-hint,
+body:has(#food-inspect:not([hidden])) .stage-hint,
+body:has(#crop-inspect:not([hidden])) .stage-hint { opacity:0; }
 .exhibit.hud-hidden .guide-toggle { visibility:hidden; }
 .hud-dock {
   position:fixed; z-index:3; left:var(--hud-edge); bottom:var(--hud-bottom);
@@ -260,7 +262,7 @@ body:has(#season-guide[open]) .stage-hint { opacity:0; }
   background:var(--river);
 }
 .landscape { position:absolute; inset:0; width:100%; height:100%; pointer-events:none; }
-#yard-shadow, #yard-hotspots { position:absolute; inset:0 0 50px; width:100%; height:calc(100% - 50px); pointer-events:none; overflow:visible; }
+#yard-shadow, #yard-hotspots, #food-hotspots, #crop-hotspots { position:absolute; inset:0 0 50px; width:100%; height:calc(100% - 50px); pointer-events:none; overflow:visible; }
 #plinth-shadow { fill:var(--plinth-shadow); opacity:.29; filter:blur(8px); transform:translate(7px,9px); }
 .landscape-sun { opacity:.75; }
 .landscape-mist { opacity:var(--mist-opacity); }
@@ -448,7 +450,7 @@ body[data-season="winter"] .landscape-sun { visibility:hidden; }
   .interlude-verse::before { margin:0 auto 10px; }
 }
 @media (min-width:721px) and (max-width:1150px) {
-  #yard, #yard-compatibility, #yard-shadow, #yard-hotspots { left:90px; width:calc(100% - 90px); }
+  #yard, #yard-compatibility, #yard-shadow, #yard-hotspots, #food-hotspots, #crop-hotspots { left:90px; width:calc(100% - 90px); }
 }
 @media (max-height:680px) and (min-width:721px) {
   :root { --hud-top:14px; --hud-bottom:14px; --ruler-step:20px; }
@@ -480,7 +482,7 @@ body[data-season="winter"] .landscape-sun { visibility:hidden; }
   .yard-links svg { width:16px; height:16px; }
   .season-note { align-self:end; padding-top:9px; }
   .season-note::before { top:17px; }
-  #yard, #yard-compatibility, #yard-shadow, #yard-hotspots { inset:240px 0 90px; height:calc(100% - 330px); }
+  #yard, #yard-compatibility, #yard-shadow, #yard-hotspots, #food-hotspots, #crop-hotspots { inset:240px 0 90px; height:calc(100% - 330px); }
   .gnomon-inspect { bottom:calc(var(--hud-bottom) + 53px); }
   .hud-dock { width:auto; grid-auto-flow:column; align-items:center; gap:4px; }
   .hud-toggle { width:40px; height:44px; }
@@ -508,3 +510,46 @@ body[data-season="winter"] .landscape-sun { visibility:hidden; }
   *, *::before, *::after { transition:none !important; animation:none !important; }
   .season-interlude { display:none; }
 }
+
+/* ---------- 食桌 ---------- */
+#food-target {
+  position:absolute; padding:0; border:0; background:transparent; cursor:pointer;
+  border-radius:10px; transition:background .2s ease, box-shadow .2s ease;
+}
+#food-target::after {
+  content:""; position:absolute; inset:-4px; border-radius:12px;
+  border:1.5px solid #ffe3a0; opacity:0; transition:opacity .2s ease;
+  box-shadow:0 0 0 2px #35241999, inset 0 0 14px #ffe3a01f;
+}
+#food-target:hover::after, #food-target:focus-visible::after { opacity:.92; }
+#food-target:hover, #food-target:focus-visible { background:#ffe3a014; outline:none; }
+.food-inspect { width:min(420px,calc(100% - 2 * var(--hud-edge))); }
+.food-kicker {
+  margin:10px 0 0; font-size:11px; letter-spacing:.24em; color:#d4b982cc;
+}
+.food-name {
+  margin:4px 0 0; font:500 24px/1.3 var(--display); letter-spacing:.08em; color:#fff6e2;
+}
+.food-inspect #food-note { margin-top:8px; font-size:13.5px; line-height:1.8; color:#e7e0cfd9; }
+
+/* 食桌描边：和立杆同一套做法，贴着桌子本体走 */
+#food-hotspots { pointer-events:none; overflow:visible; --food-stroke:3px; }
+#food-outline, #food-outline-edge, #crop-outlines path { fill:none; stroke-linejoin:round; stroke-linecap:round; }
+#food-outline-edge { stroke:#352419; stroke-width:calc(var(--food-stroke) + 2.5px); opacity:.86; }
+#food-outline { stroke:#ffe3a0; stroke-width:var(--food-stroke); }
+.stage:has(#food-target:hover,#food-target:focus-visible) #food-hotspots,
+.exhibit.food-focused #food-hotspots { --food-stroke:4.5px; }
+#food-target::after { display:none; }
+
+/* 田地描边：同一套做法，沿水田四周走 */
+#crop-hotspots { pointer-events:none; overflow:visible; --crop-stroke:3px; }
+#crop-outlines polygon, #crop-outlines ellipse, #crop-outlines path { fill:none; stroke-linejoin:round; }
+#crop-outlines .crop-edge { stroke:#352419; stroke-width:calc(var(--crop-stroke) + 2.5px); opacity:.86; }
+#crop-outlines .crop-line { stroke:#ffe3a0; stroke-width:var(--crop-stroke); }
+.stage:has(#yard.crop-hover) #crop-hotspots,
+.exhibit.crop-focused #crop-hotspots { --crop-stroke:4.5px; }
+#crop-target { position:absolute; padding:0; border:0; background:transparent; pointer-events:none; }\n#yard.crop-hover { cursor:pointer; }
+
+/* 背景音乐按钮 */
+.sound-wave { opacity:.22; transition:opacity .2s ease; }
+#sound-toggle[aria-pressed="true"] .sound-wave { opacity:1; }

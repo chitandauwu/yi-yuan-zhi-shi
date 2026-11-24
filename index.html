@@ -1,4 +1,4 @@
-<!doctype html>
+﻿<!doctype html>
 <html lang="zh-CN">
 <head>
   <meta charset="utf-8">
@@ -117,12 +117,19 @@
       <canvas id="yard-compatibility" aria-hidden="true" hidden></canvas>
       <img id="farmer-atlas" alt="" hidden>
       <canvas id="yard" tabindex="0" aria-label="三维农家小院。拖动旋转，滚动缩放，右键拖动平移，键盘方向键旋转。"></canvas>
-      <svg id="yard-hotspots" aria-hidden="true" hidden>
+      <svg id="crop-hotspots" aria-hidden="true" hidden>
+        <g id="crop-outlines"></g>
+      </svg>      <svg id="food-hotspots" aria-hidden="true" hidden>
+        <path id="food-outline-edge"/>
+        <path id="food-outline"/>
+      </svg>      <svg id="yard-hotspots" aria-hidden="true" hidden>
         <polygon id="gnomon-outline-edge"/>
         <polygon id="gnomon-outline"/>
         <path id="gnomon-measure"/>
       </svg>
       <button id="gnomon-target" type="button" aria-label="观察立杆与正午日影" aria-controls="gnomon-inspect" aria-expanded="false" hidden></button>
+      <button id="food-target" type="button" aria-label="看看这张桌上的时令吃食" aria-controls="food-inspect" aria-expanded="false" hidden></button>
+      <button id="crop-target" type="button" aria-label="看看田里的庄稼" aria-controls="crop-inspect" aria-expanded="false" hidden></button>
       <p class="renderer-message" id="renderer-message" hidden>浏览器暂时无法显示三维场景。</p>
     </section>
     <section id="gnomon-inspect" class="gnomon-inspect" aria-labelledby="gnomon-heading" hidden>
@@ -138,10 +145,31 @@
       </p>
       <p id="gnomon-note">同一地点，正午太阳越高，竿影越短。</p>
     </section>
-    <p class="stage-hint" aria-hidden="true">拖拽旋转 · 右键平移 · 滚轮缩放 · 点击立杆测影</p>
+    <section id="crop-inspect" class="gnomon-inspect food-inspect" aria-labelledby="crop-heading" hidden>
+      <header>
+        <h2 id="crop-heading">田里</h2>
+        <button id="crop-return" type="button" aria-label="收起" title="收起">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18"/></svg>
+        </button>
+      </header>
+      <p class="food-kicker" id="crop-kicker"></p>
+      <p class="food-name" id="crop-name"></p>
+      <p id="crop-note"></p>
+    </section>    <section id="food-inspect" class="gnomon-inspect food-inspect" aria-labelledby="food-heading" hidden>
+      <header>
+        <h2 id="food-heading">时令吃食</h2>
+        <button id="food-return" type="button" aria-label="收起" title="收起">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18"/></svg>
+        </button>
+      </header>
+      <p class="food-kicker" id="food-kicker"></p>
+      <p class="food-name" id="food-name"></p>
+      <p id="food-note"></p>
+    </section>    <p class="stage-hint" aria-hidden="true">拖拽旋转 · 右键平移 · 滚轮缩放 · 点击立杆测影</p>
     <aside class="stage-tools" aria-label="浏览小院">
       <div class="view-controls" aria-label="小院视角">
         <button id="toggle-gnomon" type="button" aria-label="观察立杆测影" aria-pressed="false" title="立杆测影"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 5v13M4 18h16M9 18h9"/><circle cx="16.5" cy="7.5" r="2.2"/></svg></button>
+        <button id="sound-toggle" type="button" aria-label="背景音乐" aria-pressed="false" title="背景音乐"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 9h3l4-4v14l-4-4H5z"/><path class="sound-wave" d="M16 8.5a5 5 0 0 1 0 7"/></svg></button>
         <button id="zoom-in" type="button" aria-label="放大" title="放大"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14m-7-7v14"/></svg></button>
         <button id="reset-view" type="button" aria-label="复位视角" title="复位视角"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5v6h6M4.4 10.2a8 8 0 1 1 1 7.3"/></svg></button>
         <button id="zoom-out" type="button" aria-label="缩小" title="缩小"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14"/></svg></button>
@@ -237,3 +265,9 @@
   <script src="app.js"></script>
 </body>
 </html>
+
+
+
+
+
+

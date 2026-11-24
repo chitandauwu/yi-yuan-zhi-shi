@@ -224,6 +224,8 @@
       else button.removeAttribute("aria-current");
     }
     scene?.useTerm(key,shadowRatio);
+    if (foodPanel && !foodPanel.hidden) fillFood();
+    if (cropPanel && !cropPanel.hidden) fillCrop();
   }
 
   function toggleHud() {
@@ -412,12 +414,305 @@
       width:(Math.max(...xs)-left+20)+"px", height:(Math.max(...ys)-top+16)+"px"
     });
   }
-  if (scene) scene.onGnomonView=updatePoleProjection;
+  if (scene) { scene.onGnomonView=updatePoleProjection; scene.onFoodView=updateFoodProjection; scene.onCropView=updateCropProjection; }
+  // —— 门口食桌：悬停描边，点开看这一节气吃什么 ——
+  const FOOD = {
+    rain:   { name: "青团", note: "艾草在雨水里返青。江汉人家采嫩艾捣汁，和糯米粉揉成青团，蒸一屉，先给春耕开个甜头。" },
+    grain:  { name: "粽子", note: "芒种连着端午。新麦入仓、箬叶正肥，包一屉粽子，是抢收抢种里最扎实的一顿。" },
+    dew:    { name: "柿子", note: "寒露柿子红了皮。院里摘下来漤在米缸里，等霜降后再吃，甜得发糯。" },
+    winter: { name: "糍粑", note: "小雪封地。糯米蒸熟舂烂，切块下锅煎到两面焦黄，是过冬最实在的一口。" }
+  };
+  const foodLayer = document.querySelector("#food-hotspots");
+  const foodOutline = document.querySelector("#food-outline");
+  const foodOutlineEdge = document.querySelector("#food-outline-edge");
+  const foodTarget = document.querySelector("#food-target");
+  const foodPanel = document.querySelector("#food-inspect");
+  const foodKicker = document.querySelector("#food-kicker");
+  const foodName = document.querySelector("#food-name");
+  const foodNote = document.querySelector("#food-note");
+
+  // 和立杆一样：描边贴着桌子本体，点进去拉近
+  function updateFoodProjection(projection) {
+    if (!projection) {
+      foodLayer.toggleAttribute("hidden", true);
+      if (foodTarget) foodTarget.hidden = true;
+      return;
+    }
+    const silhouette = silhouettePath(scene?.foodSilhouette(), 1.4);
+    if (silhouette) {
+      foodOutline.setAttribute("d", silhouette);
+      foodOutlineEdge.setAttribute("d", silhouette);
+    }
+    foodLayer.toggleAttribute("hidden", false);
+    const xs = projection.outline.map(([x]) => x);
+    const ys = projection.outline.map(([, y]) => y);
+    const left = Math.min(...xs), top = Math.min(...ys);
+    if (foodTarget) {
+      foodTarget.hidden = false;
+      Object.assign(foodTarget.style, {
+        left: (left - 8) + "px",
+        top: (top - 6) + "px",
+        width: (Math.max(...xs) - left + 16) + "px",
+        height: (Math.max(...ys) - top + 12) + "px"
+      });
+    }
+  }
+
+  function fillFood() {
+    const key = document.body.dataset.season;
+    const food = FOOD[key];
+    if (!food) return;
+    const button = buttons.find(entry => entry.getAttribute("aria-current") === "true");
+    const termName = button ? button.querySelector(".term-name").textContent : "";
+    foodKicker.textContent = termName || "时令";
+    foodName.textContent = food.name;
+    foodNote.textContent = food.note;
+  }
+
+  function openFood() {
+    if (!foodPanel) return;
+    closeCrop();
+    if (typeof closePoleInspection === "function") closePoleInspection();
+    fillFood();
+    foodPanel.hidden = false;
+    foodTarget.setAttribute("aria-expanded", "true");
+    exhibit.classList.add("food-focused");
+    scene?.focusFood();
+  }
+
+  function closeFood() {
+    if (!foodPanel || foodPanel.hidden) return;
+    foodPanel.hidden = true;
+    foodTarget?.setAttribute("aria-expanded", "false");
+    exhibit.classList.remove("food-focused");
+    scene?.releaseFood();
+  }
+
+  foodTarget?.addEventListener("click", () => {
+    foodPanel.hidden ? openFood() : closeFood();
+  });
+  document.querySelector("#food-return")?.addEventListener("click", closeFood);
+  document.addEventListener("keydown", event => {
+    if (event.key === "Escape") closeFood();
+  });
+
+
+  // —— 田里的庄稼：和食桌、立杆同一套（描边 → 拉近 → 文字）——
+  const CROP = {
+    rain:   { title: "杏花春雨", name: "杏花先叶", note: "杏花不等叶先开，一朵朵落在还空着的水田上。江汉人看它开花定日子：花一谢就该疏渠、夯埂、晒田备秧，到清明才落泥。" },
+    grain:  { title: "芒种秧畦", name: "手插的秧", note: "这一畦是芒种前后手工插下的中稻，行距一尺二、株距六寸，三根苗一蔸。水只留一寸护根，插完晒一天，让新根抓紧泥。" },
+    dew:    { title: "寒露稻穗", name: "低头的时候", note: "寒露的稻穗压得秆子发弯，谷粒从青转黄，捏一颗是硬的。田里断水晒十天，等霜降前开镰——晚稻要抢在初霜之前进仓。" },
+    winter: { title: "雪里菜畦", name: "唯一还绿的", note: "整块水田只剩稻桩，唯一还绿的是这条菜畦：青菜和油菜苗，霜压一层就长得更紧实。开春翻耕时，连土沤进田里做底肥。" }
+  };
+  const cropLayer = document.querySelector("#crop-hotspots");
+  const cropOutlines = document.querySelector("#crop-outlines");
+  const cropTarget = document.querySelector("#crop-target");
+  const cropPanel = document.querySelector("#crop-inspect");
+  const cropHeading = document.querySelector("#crop-heading");
+  const cropKicker = document.querySelector("#crop-kicker");
+  const cropName = document.querySelector("#crop-name");
+  const cropNote = document.querySelector("#crop-note");
+
+  let cropHulls = [];
+  let cropCentres = [];
+
+  function pointInHull(px, py, hull) {
+    if (!hull || hull.length < 3) return false;
+    let inside = false;
+    for (let i = 0, j = hull.length - 1; i < hull.length; j = i++) {
+      const [xi, yi] = hull[i], [xj, yj] = hull[j];
+      if ((yi > py) !== (yj > py) && px < (xj - xi) * (py - yi) / (yj - yi) + xi) inside = !inside;
+    }
+    return inside;
+  }
+
+  function hitsCrop(event) {
+    if (cropPanel && !cropPanel.hidden) return false;
+    if (exhibit.classList.contains("hud-hidden")) return false;
+    const rect = canvas.getBoundingClientRect();
+    const px = event.clientX - rect.left, py = event.clientY - rect.top;
+    if (cropHulls.some(hull => pointInHull(px, py, hull))) return true;
+    // 每株一个椭圆圈：点进圈里，或离圈边不远都算命中
+    return cropCentres.some(([cx, cy, r]) => Math.hypot(px - cx, py - cy) < r + 16);
+  }
+
+  // 由三角面在屏幕上栅格化，再沿边界连成轮廓：这才是真正的描边
+  function silhouettePath(flat, cell) {
+    if (!flat || flat.length < 6) return "";
+    let minX = 1e9, minY = 1e9, maxX = -1e9, maxY = -1e9;
+    for (let i = 0; i < flat.length; i += 2) {
+      const x = flat[i], y = flat[i + 1];
+      if (x < minX) minX = x;
+      if (x > maxX) maxX = x;
+      if (y < minY) minY = y;
+      if (y > maxY) maxY = y;
+    }
+    const w = Math.max(1, Math.ceil((maxX - minX) / cell) + 2);
+    const h = Math.max(1, Math.ceil((maxY - minY) / cell) + 2);
+    if (w * h > 260000) return "";
+    const grid = new Uint8Array(w * h);
+    for (let t = 0; t < flat.length; t += 6) {
+      const ax = (flat[t] - minX) / cell + 1, ay = (flat[t + 1] - minY) / cell + 1;
+      const bx = (flat[t + 2] - minX) / cell + 1, by = (flat[t + 3] - minY) / cell + 1;
+      const cx = (flat[t + 4] - minX) / cell + 1, cy = (flat[t + 5] - minY) / cell + 1;
+      const top = Math.max(0, Math.floor(Math.min(ay, by, cy)));
+      const bottom = Math.min(h - 1, Math.ceil(Math.max(ay, by, cy)));
+      for (let row = top; row <= bottom; row++) {
+        const sy = row + .5, hits = [];
+        const edges = [[ax, ay, bx, by], [bx, by, cx, cy], [cx, cy, ax, ay]];
+        for (const [x1, y1, x2, y2] of edges) {
+          if ((y1 <= sy && y2 > sy) || (y2 <= sy && y1 > sy)) {
+            hits.push(x1 + (sy - y1) / (y2 - y1) * (x2 - x1));
+          }
+        }
+        if (hits.length < 2) continue;
+        const lo = Math.max(0, Math.round(Math.min(...hits)));
+        const hi = Math.min(w - 1, Math.round(Math.max(...hits)));
+        for (let col = lo; col <= hi; col++) grid[row * w + col] = 1;
+      }
+    }
+    const at = (col, row) => (col < 0 || row < 0 || col >= w || row >= h) ? 0 : grid[row * w + col];
+    let path = "";
+    const px = col => (minX + (col - 1) * cell).toFixed(1);
+    const py = row => (minY + (row - 1) * cell).toFixed(1);
+    for (let row = 0; row < h; row++) {
+      for (let col = 0; col < w; col++) {
+        if (!at(col, row)) continue;
+        if (!at(col, row - 1)) path += `M${px(col)} ${py(row)}L${px(col + 1)} ${py(row)}`;
+        if (!at(col, row + 1)) path += `M${px(col)} ${py(row + 1)}L${px(col + 1)} ${py(row + 1)}`;
+        if (!at(col - 1, row)) path += `M${px(col)} ${py(row)}L${px(col)} ${py(row + 1)}`;
+        if (!at(col + 1, row)) path += `M${px(col + 1)} ${py(row)}L${px(col + 1)} ${py(row + 1)}`;
+      }
+    }
+    return path;
+  }
+
+  // 把一堆圆合成一条外包络：逐列取最高、最低点，再首尾相接
+  function envelopeOf(circles) {
+    const minX = Math.min(...circles.map(circle => circle[0] - circle[2])) - 3;
+    const maxX = Math.max(...circles.map(circle => circle[0] + circle[2])) + 3;
+    const step = Math.max(2, (maxX - minX) / 120);
+    const top = [], bottom = [];
+    for (let x = minX; x <= maxX; x += step) {
+      let high = null, low = null;
+      for (const [cx, cy, r] of circles) {
+        const dx = x - cx;
+        if (Math.abs(dx) > r) continue;
+        const dy = Math.sqrt(r * r - dx * dx);
+        high = high === null ? cy - dy : Math.min(high, cy - dy);
+        low = low === null ? cy + dy : Math.max(low, cy + dy);
+      }
+      if (high !== null) { top.push([x, high - 3]); bottom.push([x, low + 3]); }
+    }
+    return top.concat(bottom.reverse());
+  }
+
+  function updateCropProjection(projection) {
+    if (!projection) {
+      cropLayer.toggleAttribute("hidden", true);
+      if (cropTarget) cropTarget.hidden = true;
+      return;
+    }
+    cropHulls = [];
+    cropCentres = [];
+    cropOutlines.textContent = "";
+    if (document.body.dataset.season === "rain") {
+      const silhouette = silhouettePath(scene?.treeSilhouette(), 1.5);
+      if (silhouette) {
+        for (const className of ["crop-edge", "crop-line"]) {
+          const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
+          path.setAttribute("d", silhouette);
+          path.setAttribute("class", className);
+          cropOutlines.appendChild(path);
+        }
+      }
+      cropHulls = projection.items.filter(item => !item.ellipse);
+    }
+    for (const item of (document.body.dataset.season === "rain" ? [] : projection.items)) {
+      if (item.ellipse) {
+        cropCentres.push([item.ellipse[0], item.ellipse[1], item.ellipse[2]]);
+        for (const className of ["crop-edge", "crop-line"]) {
+          const ellipse = document.createElementNS("http://www.w3.org/2000/svg", "ellipse");
+          ellipse.setAttribute("cx", item.ellipse[0].toFixed(1));
+          ellipse.setAttribute("cy", item.ellipse[1].toFixed(1));
+          ellipse.setAttribute("rx", item.ellipse[2].toFixed(1));
+          ellipse.setAttribute("ry", item.ellipse[3].toFixed(1));
+          ellipse.setAttribute("class", className);
+          cropOutlines.appendChild(ellipse);
+        }
+      } else {
+        cropHulls.push(item);
+        const points = item.map(point => point.join(",")).join(" ");
+        for (const className of ["crop-edge", "crop-line"]) {
+          const polygon = document.createElementNS("http://www.w3.org/2000/svg", "polygon");
+          polygon.setAttribute("points", points);
+          polygon.setAttribute("class", className);
+          cropOutlines.appendChild(polygon);
+        }
+      }
+    }
+    cropLayer.toggleAttribute("hidden", false);
+    const bounds = projection.all;
+    const xs = bounds.map(([x]) => x);
+    const ys = bounds.map(([, y]) => y);
+    const left = Math.min(...xs), top = Math.min(...ys);
+    if (cropTarget) {
+      cropTarget.hidden = false;
+      Object.assign(cropTarget.style, {
+        left: (left - 6) + "px",
+        top: (top - 6) + "px",
+        width: (Math.max(...xs) - left + 12) + "px",
+        height: (Math.max(...ys) - top + 12) + "px"
+      });
+    }
+  }
+
+  function fillCrop() {
+    const key = document.body.dataset.season;
+    const crop = CROP[key];
+    if (!crop) return;
+    if (cropHeading) cropHeading.textContent = crop.title;
+    const button = buttons.find(entry => entry.getAttribute("aria-current") === "true");
+    const termName = button ? button.querySelector(".term-name").textContent : "";
+    cropKicker.textContent = termName || "时令";
+    cropName.textContent = crop.name;
+    cropNote.textContent = crop.note;
+  }
+
+  function openCrop() {
+    if (!cropPanel) return;
+    closeFood();
+    fillCrop();
+    cropPanel.hidden = false;
+    cropTarget.setAttribute("aria-expanded", "true");
+    exhibit.classList.add("crop-focused");
+    scene?.focusCrop();
+  }
+
+  function closeCrop() {
+    if (!cropPanel || cropPanel.hidden) return;
+    cropPanel.hidden = true;
+    cropTarget?.setAttribute("aria-expanded", "false");
+    exhibit.classList.remove("crop-focused");
+    scene?.releaseCrop();
+  }
+
+  cropTarget?.addEventListener("click", () => {
+    cropPanel.hidden ? openCrop() : closeCrop();
+  });
+  document.querySelector("#crop-return")?.addEventListener("click", closeCrop);
+  document.addEventListener("keydown", event => {
+    if (event.key === "Escape") closeCrop();
+  });
+
   showTerm("grain");
+
   if (!scene) return;
 
   function openPoleInspection() {
     if (!poleInspection.hidden) return;
+    closeFood();
+    closeCrop();
     poleInspection.hidden=false;
     poleTarget.setAttribute("aria-expanded","true");
     gnomonToggle?.setAttribute("aria-pressed","true");
@@ -459,30 +754,33 @@
     if ((event.button !== 0 && event.button !== 1 && event.button !== 2) || points.size === 2) return;
     if (event.button === 1) event.preventDefault();
     const poleClick=points.size===0 && event.button===0 && hitsPole(event);
+    const cropClick=!poleClick && points.size===0 && event.button===0 && hitsCrop(event);
     for (const point of points.values()) point.poleClick=false;
-    points.set(event.pointerId,{x:event.clientX,y:event.clientY,pan:event.button!==0,poleClick});
+    points.set(event.pointerId,{x:event.clientX,y:event.clientY,pan:event.button!==0,poleClick,cropClick});
     canvas.setPointerCapture(event.pointerId);
     if (points.size === 2) {
       hadPinch = true;
       scene.beginInteraction("pinch");
-    } else if (!poleClick) {
+    } else if (!poleClick && !cropClick) {
       hadPinch = false;
       scene.beginInteraction("drag");
     }
-    if (!poleClick) canvas.classList.add("dragging");
+    if (!poleClick && !cropClick) canvas.classList.add("dragging");
   });
   canvas.addEventListener("pointermove", event => {
     const old = points.get(event.pointerId);
     if (!old) {
       canvas.classList.toggle("gnomon-hover",hitsPole(event));
+      canvas.classList.toggle("crop-hover",hitsCrop(event));
       return;
     }
     const pinching = points.size === 2;
     const before = pinching ? distance() : 0;
     const dx=event.clientX-old.x, dy=event.clientY-old.y;
-    if (old.poleClick) {
+    if (old.poleClick || old.cropClick) {
       if (Math.hypot(dx,dy)<5) return;
       old.poleClick=false;
+      old.cropClick=false;
       hadPinch=false;
       scene.beginInteraction("drag");
     }
@@ -508,14 +806,17 @@
         scene.beginInteraction("drag");
       } else if (!points.size) {
         canvas.classList.remove("dragging");
-        if (!point.poleClick) scene.endInteraction(!hadPinch);
+        if (!point.poleClick && !point.cropClick) scene.endInteraction(!hadPinch);
         hadPinch = false;
       }
-      if (type==="pointerup" && point.poleClick &&
-          Math.hypot(event.clientX-point.x,event.clientY-point.y)<5 && hitsPole(event)) openPoleInspection();
+      const still = Math.hypot(event.clientX-point.x,event.clientY-point.y)<5;
+      if (type==="pointerup" && still) {
+        if (point.poleClick && hitsPole(event)) openPoleInspection();
+        else if (point.cropClick && hitsCrop(event)) openCrop();
+      }
     });
   }
-  canvas.addEventListener("pointerleave",() => canvas.classList.remove("gnomon-hover"));
+  canvas.addEventListener("pointerleave",() => { canvas.classList.remove("gnomon-hover"); canvas.classList.remove("crop-hover"); });
   canvas.addEventListener("contextmenu", event => event.preventDefault());
   canvas.addEventListener("wheel", event => {
     event.preventDefault();
@@ -538,6 +839,95 @@
     }
   });
 
+  // —— 背景音乐：不裁剪，只做浅入浅出。直接调 audio 音量，不经过 AudioContext ——
+  const soundToggle = document.querySelector("#sound-toggle");
+  const bgm = new Audio();
+  bgm.src = "assets/bgm.mp3";
+  bgm.preload = "auto";
+  bgm.loop = false;
+  const BGM_LEVEL = .55, FADE_IN = 1, FADE_OUT = 4.5;
+  let soundOn = false, fadeTimer = null, bgmFading = false;
+
+  function fadeTo(target, seconds, done) {
+    clearInterval(fadeTimer);
+    const from = bgm.volume;
+    const steps = Math.max(1, Math.round(seconds * 20));
+    let step = 0;
+    fadeTimer = setInterval(() => {
+      step++;
+      const k = Math.min(1, step / steps);
+      bgm.volume = Math.max(0, Math.min(1, from + (target - from) * k));
+      if (k >= 1) {
+        clearInterval(fadeTimer);
+        fadeTimer = null;
+        if (done) done();
+      }
+    }, 50);
+  }
+
+  function playBgm() {
+    bgmFading = false;
+    if (bgm.ended || bgm.currentTime > .2) bgm.currentTime = 0;
+    bgm.volume = 0;
+    const started = bgm.play();
+    if (started && started.catch) started.catch(() => { /* 等用户操作再试 */ });
+    fadeTo(BGM_LEVEL, FADE_IN);
+  }
+
+  function pauseBgm() {
+    fadeTo(0, 1.2, () => { if (!soundOn) bgm.pause(); });
+  }
+
+  // 结尾前浅出，放完再从开头浅入
+  bgm.addEventListener("timeupdate", () => {
+    if (!soundOn || !bgm.duration || bgmFading) return;
+    if (bgm.duration - bgm.currentTime <= FADE_OUT) {
+      bgmFading = true;
+      fadeTo(0, FADE_OUT);
+    }
+  });
+  bgm.addEventListener("ended", () => {
+    bgmFading = false;
+    if (soundOn) playBgm();
+  });
+
+  function rememberBgm(on) {
+    try { localStorage.setItem("yyzs-bgm", on ? "on" : "off"); } catch (error) { /* 忽略 */ }
+  }
+
+  function armFirstGesture() {
+    const arm = () => {
+      window.removeEventListener("pointerdown", arm, true);
+      window.removeEventListener("keydown", arm, true);
+      if (soundOn) playBgm();
+    };
+    window.addEventListener("pointerdown", arm, true);
+    window.addEventListener("keydown", arm, true);
+  }
+
+  let storedBgm = null;
+  try { storedBgm = localStorage.getItem("yyzs-bgm"); } catch (error) { storedBgm = null; }
+  if (storedBgm === "on") {
+    soundOn = true;
+    soundToggle?.setAttribute("aria-pressed", "true");
+    armFirstGesture();
+  }
+
+  soundToggle?.addEventListener("click", () => {
+    soundOn = !soundOn;
+    soundToggle.setAttribute("aria-pressed", String(soundOn));
+    rememberBgm(soundOn);
+    if (soundOn) playBgm();
+    else pauseBgm();
+  });
+
+  // 临时诊断：把播放状态写到 <html> 上，方便排查
+  setInterval(() => {
+    document.documentElement.setAttribute("data-bgm",
+      [soundOn ? "on" : "off", "rs" + bgm.readyState, bgm.paused ? "paused" : "playing",
+       "v" + bgm.volume.toFixed(2), bgm.error ? "err" + bgm.error.code : "ok"].join(" "));
+  }, 700);
+
   gnomonToggle?.addEventListener("click", () => {
     if (poleInspection.hidden) openPoleInspection();
     else closePoleInspection();
@@ -549,3 +939,4 @@
     else scene.reset();
   });
 })();
+
