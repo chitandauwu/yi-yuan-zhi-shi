@@ -725,32 +725,6 @@
       hub[1] + Math.sin(from + sweep + .18) * .33 * .52, hub[2] + .035]], "f2f6f9");
   }
 
-  // —— 冬天：门口墙边靠着的竹扫把，用来扫雪 ——
-  const broomAt = { x: 2.92, z: -.24 };
-
-  function broomProp(mesh) {
-    const { x, z } = broomAt;
-    const g = .345;
-    const topX = x + .16, topY = g + .96, topZ = z + .05;
-    // 竹柄
-    mesh.beam([x, g + .05, z], [topX, topY, topZ], .048, .044, "b98449");
-    mesh.beam([x, g + .05, z], [x + .02, g + .30, z + .01], .062, .056, "9c6c3a");
-    // 上端缠绳
-    mesh.box(topX - .02, topY - .06, topZ, .062, .05, .062, "8d6b3f", "6f5330");
-    // 下端的穗：从柄脚散开
-    const hub = [x + .01, g + .34, z + .01];
-    for (let i = 0; i < 15; i++) {
-      const a = -.72 + i * .103;
-      const reach = .30 + variation(i + 5) * .09;
-      mesh.beam(hub, [hub[0] + Math.sin(a) * reach, g - .015, hub[2] + Math.cos(a) * reach * .55],
-        .050, .030, i % 2 ? "c9a45c" : "dcbe7e");
-    }
-    // 穗心补一块，免得太透
-    mesh.box(hub[0], g + .16, hub[2], .17, .30, .13, "c9a45c", "b8924f");
-    // 穗根的铁箍
-    mesh.box(hub[0], hub[1] + .03, hub[2], .085, .06, .085, "8a7355", "6b573e");
-  }
-
   // —— 门口那张食桌：桌面一张、四条腿，四季换一样吃食 ——
   const foodTableAt = { x: 4.72, z: 1.86, height: .44, top: 1.24, deep: .84 };
   const FOOD_GROUND = .345;   // 檐前铺地石的高度
@@ -1256,10 +1230,10 @@
   }
 
   function writeFarmerQuad(data, pose, project, alpha=1) {
-    // The half-texel inset confines filtering to the current 128 px frame.
-    const edge = .5/512, tileU = .25, tileV = .2;
-    const left = pose.frame*tileU+edge, right = (pose.frame+1)*tileU-edge;
-    const top = pose.row*tileV+edge, bottom = (pose.row+1)*tileV-edge;
+    // The half-texel inset confines filtering to the current 128 px frame (512x640 atlas, 4x5 frames).
+    const edgeU = .5/512, edgeV = .5/640, tileU = .25, tileV = .2;
+    const left = pose.frame*tileU+edgeU, right = (pose.frame+1)*tileU-edgeU;
+    const top = pose.row*tileV+edgeV, bottom = (pose.row+1)*tileV-edgeV;
     const nearU = pose.flip ? right : left, farU = pose.flip ? left : right;
     const makeVertex = (x,y,u,v) => [...project(x,y),0,1,alpha,u,v,0];
     const vertices = [
@@ -1390,11 +1364,13 @@
 
   // Store the highest surface along each light ray and each vertical ray.
   // The same light map serves WebGL and the Canvas fallback.
-  function rasterLight(vertices, pixels, channel, shearX, shearZ) {
+  function rasterLight(vertices, pixels, channel, shearX, shearZ, startVert = 0, endVert = vertices.length / 9) {
     const {size,left,back,width,depth}=lightGrid;
     const scaleX=size/width, scaleZ=size/depth;
-    for (let i=0;i<vertices.length;i+=27) {
+    const from=startVert*9, to=Math.min(vertices.length, endVert*9);
+    for (let i=from;i+26<to;i+=27) {
       const ay=vertices[i+1], by=vertices[i+10], cy=vertices[i+19];
+      if (ay < -9000 || by < -9000 || cy < -9000) continue;
       const ax=(vertices[i]-ay*shearX-left)*scaleX;
       const az=(vertices[i+2]-ay*shearZ-back)*scaleZ;
       const bx=(vertices[i+9]-by*shearX-left)*scaleX;
@@ -1422,13 +1398,9 @@
     }
   }
 
-  function lightMap(world, shadowRatio, term) {
-    const shearX=sunHeading[0]*shadowRatio, shearZ=sunHeading[1]*shadowRatio;
-    const {size}=lightGrid;
-    const pixels=new Uint8Array(size*size*4);
-    rasterLight(world,pixels,0,shearX,shearZ);
-    rasterLight(world,pixels,1,0,0);
+  function dilateContactShadow(pixels) {
     // Expand nearby blockers by two texels so contact shadows hug the edges of objects.
+    const {size}=lightGrid;
     const stride=size*4;
     for (let z=0;z<size;z++) {
       const above=Math.max(0,z-2)*stride, below=Math.min(size-1,z+2)*stride;
@@ -1440,9 +1412,62 @@
         pixels[p+1]=Math.max(pixels[p],near-4);
       }
     }
+  }
+
+  function buildStubbleMesh(harvested) {
+    if (!harvested || !harvested.length) return null;
+    const mesh = new Mesh();
+    for (const [hx, hz] of harvested) {
+      for (let k = -3; k <= 3; k++) {
+        blade(mesh, hx + k * .034, hz + Math.abs(k) * .024, .13 + variation((k + 4) * 9) * .06,
+          k * .10, k % 2 ? "c9a86a" : "dcbe80");
+      }
+      mesh.box(hx, .263, hz, .13, .012, .13, "8f7a4e", "7c6a44");
+    }
+    return mesh.data;
+  }
+
+  function lightMap(world, shadowRatio, term, dynamicRanges = null, basePixels = null, extraMesh = null) {
+    const shearX=sunHeading[0]*shadowRatio, shearZ=sunHeading[1]*shadowRatio;
+    const {size}=lightGrid;
+    let staticBase = basePixels;
+    if (!staticBase) {
+      staticBase = new Uint8Array(size*size*4);
+      if (dynamicRanges && dynamicRanges.length) {
+        const sorted = dynamicRanges.slice().sort((a, b) => a[0] - b[0]);
+        const totalVerts = Math.floor(world.length / 9);
+        let cursor = 0;
+        for (const [start, end] of sorted) {
+          if (start > cursor) {
+            rasterLight(world, staticBase, 0, shearX, shearZ, cursor, start);
+            rasterLight(world, staticBase, 1, 0, 0, cursor, start);
+          }
+          if (end > cursor) cursor = end;
+        }
+        if (cursor < totalVerts) {
+          rasterLight(world, staticBase, 0, shearX, shearZ, cursor, totalVerts);
+          rasterLight(world, staticBase, 1, 0, 0, cursor, totalVerts);
+        }
+      } else {
+        rasterLight(world, staticBase, 0, shearX, shearZ);
+        rasterLight(world, staticBase, 1, 0, 0);
+      }
+    }
+    const pixels = new Uint8Array(staticBase);
+    if (dynamicRanges && dynamicRanges.length) {
+      for (const [start, end] of dynamicRanges) {
+        rasterLight(world, pixels, 0, shearX, shearZ, start, end);
+        rasterLight(world, pixels, 1, 0, 0, start, end);
+      }
+    }
+    if (extraMesh && extraMesh.length) {
+      rasterLight(extraMesh, pixels, 0, shearX, shearZ);
+      rasterLight(extraMesh, pixels, 1, 0, 0);
+    }
+    dilateContactShadow(pixels);
     const lantern=lanternStrength[term];
     const palette=seasonColors[term];
-    return {pixels,shearX,shearZ,opacity:shadeOpacity[term],sun:unit([shearX,1,shearZ]),
+    return {pixels,staticBase,shearX,shearZ,opacity:shadeOpacity[term],sun:unit([shearX,1,shearZ]),
       sunTint:palette.sunTint,shadowTint:palette.shadowTint,
       haze:color(hazeColor[term]),practicalPower:[lantern,lantern*.88,term==="winter" ? 1.95 : 0]};
   }
@@ -1958,8 +1983,19 @@
       this.lastCameraTime = undefined;
       this.invalidateView();
     }
-    reset(immediate = false) {
+    activeFocus() {
+      return this.gnomonView || this.foodView || this.cropView || this.sickleView || this.fireView || null;
+    }
+    clearAllFocus() {
       this.gnomonView = null;
+      this.foodView = null;
+      this.cropView = null;
+      this.sickleView = null;
+      this.fireView = null;
+    }
+    reset(immediate = false) {
+      this.clearAllFocus();
+      this.introTrack = null;
       const yaw = immediate || this.yaw === undefined
         ? homeView.yaw
         : this.yaw + shortestAngleDelta(this.yaw,homeView.yaw);
@@ -1974,11 +2010,56 @@
       if (immediate || !this.motion) this.applyViewImmediate(target);
       else this.moveView(target);
     }
+    // 电影感开场运镜：由低角度檐前水田近景起幅，沿弧线旋升拉远至全景俯瞰，用户随时交互可无跳变接管
+    playIntro() {
+      if (!this.motion) {
+        this.reset(true);
+        return;
+      }
+      this.clearAllFocus();
+      const start = {
+        yaw: homeView.yaw + .74,
+        pitch: .23,
+        zoom: 2.45,
+        panX: .75,
+        panZ: -2.05,
+        pivotY: 1.38
+      };
+      const end = {
+        yaw: homeView.yaw,
+        pitch: homeView.pitch,
+        zoom: 1,
+        panX: 0,
+        panZ: 0,
+        pivotY: homeView.pivot[1]
+      };
+      this.applyViewImmediate(start);
+      this.targetView = { ...end };
+      this.introTrack = {
+        start,
+        end,
+        startLogZoom: Math.log(start.zoom),
+        endLogZoom: Math.log(end.zoom),
+        startTime: undefined,
+        duration: 2.55
+      };
+      this.cameraMode = "intro";
+      this.wakeCamera();
+    }
+    cancelIntro() {
+      if (this.cameraMode !== "intro" && !this.introTrack) return;
+      this.introTrack = null;
+      this.targetView = this.currentView();
+      this.zeroCameraVelocity();
+      this.cameraMode = "idle";
+      this.onIntroInterrupt?.();
+    }
     currentView() {
       const {yaw,pitch,zoom,panX,panZ,pivotY}=this;
       return {yaw,pitch,zoom,panX,panZ,pivotY};
     }
     moveView(target) {
+      this.introTrack = null;
       if (!this.motion) {
         this.applyViewImmediate(target);
         return;
@@ -1988,25 +2069,89 @@
       this.cameraMode = "glide";
       this.wakeCamera();
     }
-    // 割掉一株：顶点挪到画外，位置记下来（秸秆在 act 里画）
-    harvestPlant(index) {
-      const range = cropRanges[index];
-      const spot = cropSpots[index];
-      if (!range || !spot || !this.world || !this.world.data) return false;
+    // 真正割倒一批稻谷、留茬并即时更新作物投影
+    applyHarvestBatch(batch) {
+      if (!batch || !batch.length || !this.world || !this.world.data) return;
       const data = this.world.data;
-      for (let v = range[0]; v < range[1]; v++) {
-        const o = v * 9;
-        data[o + 1] = -9999;
+      if (!this.harvested) this.harvested = [];
+      let changed = false;
+      for (const i of batch) {
+        const spot = cropSpots[i];
+        const range = cropRanges[i];
+        if (!spot || !range) continue;
+        let anyVisible = false;
+        for (let v = range[0]; v < range[1]; v++) {
+          if (data[v * 9 + 1] > -9000) {
+            data[v * 9 + 1] = -9999;
+            anyVisible = true;
+          }
+        }
+        if (anyVisible) {
+          this.harvested.push([spot[0], spot[1]]);
+          changed = true;
+        }
       }
+      if (!changed) return;
       this.uploadGpuBuffer(this.world, false);
+      this.cropGeometry = null;
+      this.rebuildShadows();
+      this.onHarvestCut?.();
+    }
+    // 一割一片：农夫轻快跑至落点挥镰，镰落稻倒并实时更新日影
+    harvestPlant(index) {
+      const anchor = cropSpots[index];
+      if (!anchor || !this.world || !this.world.data) return null;
+      // 若上一次挥镰尚未落刀，先立刻完成上一批割稻，连点绝不漏割
+      if (this.harvestSwing && !this.harvestSwing.applied && this.harvestSwing.pending) {
+        this.harvestSwing.applied = true;
+        this.applyHarvestBatch(this.harvestSwing.pending);
+      }
+      const [ax, az] = anchor;
+      const swathRadius = 1.65;
       if (!this.harvested) this.harvested = [];
       if (!this.harvestedIndices) this.harvestedIndices = new Set();
-      this.harvestedIndices.add(index);
-      this.harvested.push([spot[0], spot[1]]);
-      this.harvestSwing = { x: spot[0], z: spot[1], start: this.sceneTime || 0 };
+      const batch = [];
+      for (let i = 0; i < cropSpots.length; i++) {
+        if (this.harvestedIndices.has(i)) continue;
+        const spot = cropSpots[i];
+        const range = cropRanges[i];
+        if (!spot || !range) continue;
+        if (Math.hypot(spot[0] - ax, spot[1] - az) > swathRadius) continue;
+        this.harvestedIndices.add(i);
+        batch.push(i);
+      }
+      if (!batch.length) return null;
+      const fallback = farmerSites.dew.position;
+      const fromX = this.farmer ? this.farmer.x : (this.harvestStance ? this.harvestStance.x : fallback[0]);
+      const fromZ = this.farmer ? this.farmer.z : (this.harvestStance ? this.harvestStance.z : fallback[2]);
+      let dx = ax - fromX, dz = az - fromZ;
+      const rawDist = Math.hypot(dx, dz);
+      const faceX = rawDist > .06 ? dx / rawDist : (this.harvestStance ? this.harvestStance.faceX : -1);
+      const faceZ = rawDist > .06 ? dz / rawDist : (this.harvestStance ? this.harvestStance.faceZ : .5);
+      // 农夫停在稻丛前侧半步处挥镰，既不踩进正中也不离太远
+      const stepBack = rawDist > .55 ? .42 : 0;
+      const standX = around(plot.left + .18, plot.right - .18, ax - faceX * stepBack);
+      const standZ = around(plot.near + .18, plot.far - .18, az - faceZ * stepBack);
+      const walkDist = Math.hypot(standX - fromX, standZ - fromZ);
+      const walkDur = walkDist < .14 ? .08 : around(.20, .52, walkDist * .085);
+      const swingDur = .72;
+      if (!this.motion) {
+        this.applyHarvestBatch(batch);
+        this.harvestStance = { x: standX, z: standZ, faceX, faceZ };
+        this.harvestSwing = null;
+      } else {
+        this.harvestSwing = {
+          fromX, fromZ, x: standX, z: standZ, cutX: ax, cutZ: az,
+          faceX, faceZ, walkDist, walkDur, swingDur,
+          start: this.sceneTime || 0, pending: batch, applied: false
+        };
+      }
       this.render();
       if (this.motion) this.queueFrame();
-      return true;
+      return { cut: batch.length, harvested: this.harvestedIndices.size, total: cropSpots.length };
+    }
+    harvestStats() {
+      return { harvested: this.harvestedIndices ? this.harvestedIndices.size : 0, total: cropSpots.length };
     }
 
     // 多数采样点被挡住时，整条描边就别画了
@@ -2063,10 +2208,16 @@
       return { outline: outlineHull(points) };
     }
 
+    claimFocus(slot) {
+      const saved = this.activeFocus() || {...(this.targetView || this.currentView())};
+      this.clearAllFocus();
+      this[slot] = saved;
+      return saved;
+    }
+
     focusFire() {
       if (this.fireView) return;
-      const base = this.targetView || this.currentView();
-      this.fireView = {...base};
+      const base = this.claimFocus("fireView");
       this.moveView({
         yaw: this.yaw + shortestAngleDelta(this.yaw, base.yaw),
         pitch: around(.52,.74,base.pitch),
@@ -2093,113 +2244,22 @@
       for (let v = cakeRanges[index][0]; v < cakeRanges[index][1]; v++) {
         if (data[v * 9 + 1] > -9000) { data[v * 9 + 1] = -9999; touched = true; }
       }
-      if (touched) this.uploadGpuBuffer(this.world, false);
+      if (touched) {
+        this.uploadGpuBuffer(this.world, false);
+        this.foodGeometry = null;
+        this.rebuildShadows();
+      }
       if (!this.roasting) this.roasting = [];
       this.roasting.push(index);
       this.render();
       if (this.motion) this.queueFrame();
-      return true;
+      return { roasted: this.roasting.length, total: cakeRanges.length };
     }
 
-    broomSilhouette() { return this.outlineTriangles(this.broomRange); }
-
-    broomProjection() {
-      const flat = this.broomSilhouette();
-      if (!flat) return null;
-      const points = [];
-      for (let i = 0; i < flat.length; i += 2) points.push([flat[i], flat[i + 1]]);
-      if (points.every(([x]) => x < 0) || points.every(([x]) => x > this.viewWidth)) return null;
-      return { outline: outlineHull(points) };
-    }
-
-    focusBroom() {
-      if (this.broomView) return;
-      const base = this.targetView || this.currentView();
-      this.broomView = {...base};
-      this.moveView({
-        yaw: this.yaw + shortestAngleDelta(this.yaw, base.yaw),
-        pitch: around(.46,.68,base.pitch),
-        zoom: 4.4,
-        panX: broomAt.x - homeView.pivot[0],
-        panZ: broomAt.z - homeView.pivot[2],
-        pivotY: .62
-      });
-    }
-    releaseBroom() {
-      if (!this.broomView) return;
-      const target = this.broomView;
-      this.broomView = null;
-      this.moveView({...target, yaw: this.yaw + shortestAngleDelta(this.yaw, target.yaw)});
-    }
-
-    setSweepMode(on) {
-      this.sweepMode = Boolean(on);
-      if (this.sweepMode) { this.sweepStance = null; this.sweepSwing = null; }
-      this.render();
-      if (this.motion) this.queueFrame();
-    }
-
-    fireHitBox() {
-      const projection = this.fireProjection();
-      if (!projection) return null;
-      const xs = projection.outline.map(([x]) => x);
-      const ys = projection.outline.map(([, y]) => y);
-      return [Math.min(...xs), Math.min(...ys), Math.max(...xs), Math.max(...ys)];
-    }
-
-    campfireScreen() {
-      const m = this.cameraMatrix;
-      if (!m || !this.viewWidth) return null;
-      const wx = campfire.x, wy = campfire.ground + .28, wz = campfire.z;
-      return [
-        (wx * m[0] + wy * m[4] + wz * m[8] + m[12] + 1) * this.viewWidth / 2,
-        (1 - wx * m[1] - wy * m[5] - wz * m[9] - m[13]) * this.viewHeight / 2
-      ];
-    }
-
-    // 扫完雪：走回火堆边接着烤火
-    returnToFire() {
-      const f = this.farmer;
-      this.fireWalk = { from: [f.x, f.z], start: this.sceneTime || 0 };
-      this.sweepStance = null;
-      this.sweepSwing = null;
-      this.sweepMode = false;
-      this.render();
-      if (this.motion) this.queueFrame();
-    }
-
-    // 屏幕坐标命中的雪点
-    snowSpotAt(px, py, radius = 56) {
-      const m = this.cameraMatrix;
-      if (!m || !this.viewWidth || !this.snowSpots) return -1;
-      let best = -1, bestDistance = radius;
-      for (let index = 0; index < this.snowSpots.length; index++) {
-        const [wx, wz] = this.snowSpots[index];
-        if (this.swept && this.swept.some(([sx, sz]) => Math.abs(sx - wx) < .01 && Math.abs(sz - wz) < .01)) continue;
-        const wy = .28;
-        const sx = (wx * m[0] + wy * m[4] + wz * m[8] + m[12] + 1) * this.viewWidth / 2;
-        const sy = (1 - wx * m[1] - wy * m[5] - wz * m[9] - m[13]) * this.viewHeight / 2;
-        const distance = Math.hypot(px - sx, py - sy);
-        if (distance < bestDistance) { bestDistance = distance; best = index; }
-      }
-      return best;
-    }
-
-    // 扫开一处雪
-    sweepSpot(index) {
-      if (!this.snowSpots || !this.snowSpots[index]) return false;
-      const [x, z] = this.snowSpots[index];
-      if (!this.swept) this.swept = [];
-      this.swept.push([x, z]);
-      this.sweepSwing = { x, z, start: this.sceneTime || 0 };
-      this.render();
-      if (this.motion) this.queueFrame();
-      return true;
-    }
-
-    sickleSilhouette() { return this.outlineTriangles(this.sickleRange); }
+    sickleSilhouette() { return this.harvestMode ? null : this.outlineTriangles(this.sickleRange); }
 
     sickleProjection() {
+      if (this.harvestMode) return null;
       const flat = this.sickleSilhouette();
       if (!flat) return null;
       const points = [];
@@ -2210,8 +2270,7 @@
 
     focusSickle() {
       if (this.sickleView) return;
-      const base = this.targetView || this.currentView();
-      this.sickleView = {...base};
+      const base = this.claimFocus("sickleView");
       this.moveView({
         yaw: this.yaw + shortestAngleDelta(this.yaw, base.yaw),
         pitch: around(.46,.68,base.pitch),
@@ -2228,23 +2287,49 @@
       this.moveView({...target, yaw: this.yaw + shortestAngleDelta(this.yaw, target.yaw)});
     }
 
-    // 进入/退出抢收：镰刀从门口消失，农夫手里多一把
+    // 进入/退出收割：镰刀在墙边与农夫手中切换，同步更新阴影，退出时完整还原
     setHarvestMode(on) {
-      this.harvestMode = Boolean(on);
-      if (this.harvestMode) {
-        this.harvestStance = null;
-        this.harvestSwing = null;
+      const next = Boolean(on);
+      if (!next && this.harvestSwing && !this.harvestSwing.applied && this.harvestSwing.pending) {
+        this.harvestSwing.applied = true;
+        this.applyHarvestBatch(this.harvestSwing.pending);
       }
+      this.harvestMode = next;
+      if (this.sickleRange && this.world && this.world.data) {
+        const data = this.world.data;
+        const [start, end] = this.sickleRange;
+        if (this.harvestMode) {
+          if (!this.sickleSavedY) {
+            this.sickleSavedY = new Float32Array(end - start);
+            for (let v = start; v < end; v++) this.sickleSavedY[v - start] = data[v * 9 + 1];
+          }
+          for (let v = start; v < end; v++) data[v * 9 + 1] = -9999;
+        } else if (this.sickleSavedY) {
+          for (let v = start; v < end; v++) data[v * 9 + 1] = this.sickleSavedY[v - start];
+        }
+        this.uploadGpuBuffer(this.world, false);
+        this.rebuildShadows();
+      }
+      if (this.harvestMode && this.term === "dew") {
+        const cur = this.farmer || { x: farmerSites.dew.position[0], z: farmerSites.dew.position[2] };
+        this.harvestStance = { x: cur.x, z: cur.z, faceX: -.75, faceZ: .65 };
+      } else {
+        this.harvestStance = null;
+      }
+      this.harvestSwing = null;
+      this.harvestChaff = [];
+      this.sickleGeometry = null;
+      this.cropGeometry = null;
+      this.invalidateView();
       this.render();
       if (this.motion) this.queueFrame();
     }
 
-    // 屏幕坐标命中的那一株（抢收模式下点任意稻子）
-    plantAtScreen(px, py, radius = 26) {
+    // 屏幕坐标命中的稻丛（收割模式下放宽命中半径，便于成片收割）
+    plantAtScreen(px, py, radius = 64) {
       const m = this.cameraMatrix;
       if (!m || !this.viewWidth) return -1;
       let best = -1, bestDistance = radius;
-      const data = this.landData;
       for (let index = 0; index < cropSpots.length; index++) {
         if (this.harvestedIndices && this.harvestedIndices.has(index)) continue;
         const [wx, wz] = cropSpots[index];
@@ -2258,6 +2343,7 @@
     }
 
     cropProjection() {
+      if (this.harvestMode) return null;
       const m = this.cameraMatrix;
       if (!m || !this.viewWidth) return null;
       const project = (px, py, pz) => [
@@ -2266,8 +2352,7 @@
       ];
       const items = [];
       if (this.term === "rain") {
-        // 杏花：整棵树一圈，点取在各团树冠的圆周上
-        // 杏花：树冠各团 + 树干，一起求凸包，整棵树描一圈
+        // 杏花：树冠各团 + 树干，整棵树统一轮廓
         const ring = [];
         for (const [sx, sy, sz, bulk] of treeSpots) {
           if (Math.hypot(sx - 7.32, sz - 4.10) > 2.4) continue;
@@ -2287,40 +2372,57 @@
                         [7.32, 3.2, 3.4], [7.32, 3.2, 4.8], [7.32, 1.6, 4.10], [7.32, .6, 4.10]];
         if (this.mostlyHidden(probes, this.treeRange)) return null;
         if (ring.length) items.push(outlineHull(ring));
+      } else if (this.term === "winter") {
+        // 雪里菜畦：合并为一个整体外框，不再逐棵画圆
+        const box = CROP_BOX.winter;
+        const cx = (box.left + box.right) / 2, cz = (box.near + box.far) / 2;
+        const probes = [[cx, .42, cz], [cx, .42, box.near + .4], [cx, .42, box.far - .4]];
+        if (this.mostlyHidden(probes)) return null;
+        const pts = [];
+        for (const px of [box.left - .04, box.right + .04]) {
+          for (const pz of [box.near - .04, box.far + .04]) {
+            pts.push(project(px, .27, pz), project(px, .43, pz));
+          }
+        }
+        items.push(outlineHull(pts));
       } else {
-        // 作物：一株一个椭圆
+        // 芒种秧畦 / 寒露稻穗：整片作物合并为一个整体外框
         const box = CROP_BOX[this.term] || CROP_BOX.grain;
+        let minX = Infinity, maxX = -Infinity, minZ = Infinity, maxZ = -Infinity, maxH = .32;
+        let count = 0;
         for (let index = 0; index < cropSpots.length; index++) {
+          if (this.harvestedIndices && this.harvestedIndices.has(index)) continue;
           const [px, pz, height] = cropSpots[index];
           if (px < box.left - .2 || px > box.right + .2) continue;
           if (pz < box.near - .2 || pz > box.far + .2) continue;
-          if (this.harvestedIndices && this.harvestedIndices.has(index)) continue;
-          if (this.isHidden(px, .30 + height + .06, pz)) continue;
-          const base = project(px, .30, pz);
-          const side = project(px + .14, .30, pz + .07);
-          const top = project(px, .30 + height * 1.04, pz);
-          const radius = Math.hypot(side[0] - base[0], side[1] - base[1]);
-          const centreY = (base[1] + top[1]) / 2;
-          const radiusY = Math.max(radius, Math.abs(top[1] - base[1]) * .58);
-          items.push({ ellipse: [base[0], centreY, radius, radiusY], index });
+          minX = Math.min(minX, px); maxX = Math.max(maxX, px);
+          minZ = Math.min(minZ, pz); maxZ = Math.max(maxZ, pz);
+          maxH = Math.max(maxH, height);
+          count++;
         }
+        if (!count) return null;
+        const cx = (minX + maxX) / 2, cz = (minZ + maxZ) / 2;
+        const topY = .30 + maxH * .95;
+        const probes = [[cx, topY, cz], [minX, topY, minZ], [maxX, topY, maxZ]];
+        if (this.mostlyHidden(probes)) return null;
+        const pad = .22;
+        const pts = [];
+        for (const px of [minX - pad, maxX + pad]) {
+          for (const pz of [minZ - pad, maxZ + pad]) {
+            pts.push(project(px, .29, pz), project(px, topY, pz));
+          }
+        }
+        items.push(outlineHull(pts));
       }
       if (!items.length) return null;
-      const all = [];
-      for (const item of items) {
-        if (item.ellipse) {
-          const [cx, cy, rx, ry] = item.ellipse;
-          all.push([cx - rx, cy - ry], [cx + rx, cy + ry]);
-        } else {
-          all.push(...item);
-        }
-      }
-      return { items, all, indices: items.map(item => item.index) };
+      const all = items.flat();
+      if (all.every(([px]) => px < 0) || all.every(([px]) => px > this.viewWidth) ||
+          all.every(([, py]) => py < 0) || all.every(([, py]) => py > this.viewHeight)) return null;
+      return { items, all };
     }
     focusCrop() {
       if (this.cropView) return;
-      const base = this.targetView || this.currentView();
-      this.cropView = {...base};
+      const base = this.claimFocus("cropView");
       const focus = CROP_FOCUS[this.term] || CROP_FOCUS.grain;
       this.moveView({
         yaw: this.yaw + shortestAngleDelta(this.yaw, base.yaw),
@@ -2362,8 +2464,7 @@
     }
     focusFood() {
       if (this.foodView) return;
-      const base = this.targetView || this.currentView();
-      this.foodView = {...base};
+      const base = this.claimFocus("foodView");
       this.moveView({
         yaw: this.yaw + shortestAngleDelta(this.yaw, base.yaw),
         pitch: around(.52,.76,base.pitch),
@@ -2381,15 +2482,14 @@
     }
     focusGnomon() {
       if (this.gnomonView) return;
-      const base = this.targetView || this.currentView();
-      this.gnomonView = {...base};
+      const base = this.claimFocus("gnomonView");
       this.moveView({
         yaw:this.yaw + shortestAngleDelta(this.yaw,base.yaw),
         pitch:around(.49,.78,base.pitch),
-        zoom:5.25,
-        panX:gnomon.x-homeView.pivot[0],
-        panZ:gnomon.z-homeView.pivot[2],
-        pivotY:gnomon.base+gnomon.height*.43
+        zoom:4.55,
+        panX:gnomon.x-homeView.pivot[0]+.25,
+        panZ:gnomon.z-homeView.pivot[2]+.18,
+        pivotY:gnomon.base-.05
       });
     }
     releaseGnomon() {
@@ -2406,12 +2506,14 @@
       this.dragMoved = false;
       this.lastDragTime = nowMs();
       if (!this.motion) return;
-      if (this.cameraMode === "coast" || (this.cameraMode === "glide" && !this.gnomonView)) {
+      const focused = Boolean(this.activeFocus());
+      if (this.cameraMode === "intro") this.cancelIntro();
+      if (this.cameraMode === "coast" || (this.cameraMode === "glide" && !focused)) {
         this.targetView.yaw = this.yaw;
         this.targetView.pitch = this.pitch;
         this.cameraVelocity.yaw *= .25;
         this.cameraVelocity.pitch *= .25;
-        if (!this.gnomonView) {
+        if (!focused) {
           this.targetView.panX = this.panX;
           this.targetView.panZ = this.panZ;
           this.targetView.zoom = this.zoom;
@@ -2428,6 +2530,7 @@
         this.cameraMode = "idle";
         return;
       }
+      const focused = Boolean(this.activeFocus());
       const idle = nowMs() - (this.lastDragTime || 0);
       if (wasDrag && allowInertia && this.dragMoved && idle < 110) {
         const freshness = Math.exp(-Math.max(0,idle - 16) / 34);
@@ -2458,14 +2561,14 @@
         };
         projectCoast("yaw",vy,rotOmega);
         projectCoast("pitch",vp,rotOmega,0,Math.PI/2-.01);
-        if (!this.gnomonView) {
+        if (!focused) {
           projectCoast("panX",vpx,panOmega,-9,9);
           projectCoast("panZ",vpz,panOmega,-9,9);
         }
         this.cameraMode = coasting ? "coast" : "idle";
         if (coasting) this.wakeCamera();
       } else {
-        this.cameraMode = this.gnomonView && this.cameraActive ? "glide" : "idle";
+        this.cameraMode = focused && this.cameraActive ? "glide" : "idle";
       }
       this.dragVelocity = {yaw:0,pitch:0,panX:0,panZ:0};
       this.dragMoved = false;
@@ -2479,6 +2582,7 @@
         this.invalidateView();
         return;
       }
+      if (this.cameraMode === "intro") this.cancelIntro();
       this.targetView.yaw += dx;
       this.targetView.pitch = around(0,Math.PI/2-.01,this.targetView.pitch + dy);
       if (this.cameraMode === "drag") {
@@ -2497,7 +2601,7 @@
       this.wakeCamera();
     }
     pan(dx, dy) {
-      if (this.gnomonView) return;
+      if (this.activeFocus()) return;
       const scale = this.worldUnitsPerPixel;
       if (!scale) return;
       const depth = -dy*scale/Math.max(.28,Math.sin(this.pitch));
@@ -2511,6 +2615,7 @@
         this.invalidateView();
         return;
       }
+      if (this.cameraMode === "intro") this.cancelIntro();
       this.targetView.panX = around(-9,9,this.targetView.panX + stepX);
       this.targetView.panZ = around(-9,9,this.targetView.panZ + stepZ);
       if (this.cameraMode === "drag") {
@@ -2529,19 +2634,57 @@
       this.wakeCamera();
     }
     magnify(factor) {
-      const minZoom = this.gnomonView ? 3.85 : .72;
-      const maxZoom = this.gnomonView ? 6.5 : 1.9;
+      const focused = Boolean(this.activeFocus());
+      const minZoom = this.gnomonView ? 3.85 : focused ? 2.0 : .72;
+      const maxZoom = focused ? 6.5 : 1.9;
       if (!this.motion) {
         this.zoom = around(minZoom,maxZoom,this.zoom * factor);
         this.targetView.zoom = this.zoom;
         this.invalidateView();
         return;
       }
+      if (this.cameraMode === "intro") this.cancelIntro();
       this.targetView.zoom = around(minZoom,maxZoom,this.targetView.zoom * factor);
       this.wakeCamera();
     }
     stepCamera(time) {
       if (!this.cameraActive || !this.motion) return;
+      if (this.cameraMode === "intro" && this.introTrack) {
+        const track = this.introTrack;
+        if (track.startTime === undefined) track.startTime = time;
+        const u = around(0, 1, (time - track.startTime) / (track.duration * 1000));
+        // 五次 S 型缓动（起止加速度均为 0），各轴略微错拍营造电影摇臂升镜弧线感
+        const smoother = t => t * t * t * (t * (t * 6 - 15) + 10);
+        const eYaw = smoother(u);
+        const eZoom = smoother(Math.pow(u, .92));
+        const ePitch = smoother(Math.pow(u, 1.18));
+        const ePan = smoother(u);
+        const arc = Math.sin(u * Math.PI);
+        const { start, end } = track;
+        this.yaw = start.yaw + (end.yaw - start.yaw) * eYaw;
+        this.pitch = start.pitch + (end.pitch - start.pitch) * ePitch - arc * .03;
+        this.zoom = Math.exp(track.startLogZoom + (track.endLogZoom - track.startLogZoom) * eZoom);
+        this.panX = start.panX + (end.panX - start.panX) * ePan + arc * .42;
+        this.panZ = start.panZ + (end.panZ - start.panZ) * ePan - arc * .35;
+        this.pivotY = start.pivotY + (end.pivotY - start.pivotY) * ePitch;
+        this.cameraDirty = true;
+        if (u >= 1) {
+          this.yaw = wrapAngle(end.yaw);
+          this.pitch = end.pitch;
+          this.zoom = end.zoom;
+          this.panX = end.panX;
+          this.panZ = end.panZ;
+          this.pivotY = end.pivotY;
+          this.targetView = this.currentView();
+          this.zeroCameraVelocity();
+          this.introTrack = null;
+          this.cameraMode = "idle";
+          this.cameraActive = false;
+          this.lastCameraTime = undefined;
+          this.onIntroDone?.();
+        }
+        return;
+      }
       const dt = this.lastCameraTime === undefined
         ? 1 / 60
         : around(.001,.05,(time - this.lastCameraTime) / 1000);
@@ -2549,10 +2692,11 @@
 
       const mode = this.cameraMode;
       const speedScale = this.software ? 1.5 : 1;
-      const rotOmega = (mode === "drag" || mode === "pinch" ? 36 : mode === "coast" ? 6.2 : mode === "glide" ? 9.5 : 15) * speedScale;
-      const panOmega = (mode === "drag" || mode === "pinch" ? 36 : mode === "coast" ? 7.2 : mode === "glide" ? 9.5 : 16) * speedScale;
-      const zoomOmega = (mode === "pinch" ? 34 : mode === "glide" ? 9.5 : 14) * speedScale;
-      const pivotOmega = 9.5 * speedScale;
+      const intro = mode === "intro";
+      const rotOmega = (intro ? 3.8 : mode === "drag" || mode === "pinch" ? 36 : mode === "coast" ? 6.2 : mode === "glide" ? 9.5 : 15) * speedScale;
+      const panOmega = (intro ? 3.8 : mode === "drag" || mode === "pinch" ? 36 : mode === "coast" ? 7.2 : mode === "glide" ? 9.5 : 16) * speedScale;
+      const zoomOmega = (intro ? 3.6 : mode === "pinch" ? 34 : mode === "glide" ? 9.5 : 14) * speedScale;
+      const pivotOmega = (intro ? 3.8 : 9.5) * speedScale;
 
       const target = this.targetView;
       const vel = this.cameraVelocity;
@@ -2606,6 +2750,7 @@
     }
     useTerm(term, shadowLength) {
       this.term = term;
+      this.shadowLength = shadowLength;
       this.farmerStart = undefined;
       this.state = seasonColors[term];
       const mesh = new Mesh();
@@ -2613,57 +2758,30 @@
       cropRanges = [];
       cakeRanges = [];
       treeSpots = [];
+      this.harvestMode = false;
       this.harvested = [];
       this.harvestedIndices = new Set();
       this.harvestSwing = null;
+      this.harvestStance = null;
+      this.harvestChaff = [];
+      this.sickleSavedY = null;
+      this.roasting = [];
       platform(mesh,this.state);
       field(mesh,term,this.state);
       farmhouse(mesh,this.state,term);
       plantsAndTools(mesh,term,this.state);
       sundialStand(mesh);
-    const foodStart = mesh.data.length / 9;
-    foodTable(mesh,term);
-    this.foodRange = [foodStart, mesh.data.length / 9];
-    // 镰刀只在秋天的院子里出现
-    if (term === "dew") {
-      const sickleStart = mesh.data.length / 9;
-      sickleProp(mesh);
-      this.sickleRange = [sickleStart, mesh.data.length / 9];
-    } else {
-      this.sickleRange = null;
-    }
-    // 扫把只在冬天的院子里出现
-    if (term === "winter") {
-      const broomStart = mesh.data.length / 9;
-      broomProp(mesh);
-      this.broomRange = [broomStart, mesh.data.length / 9];
-      // 院子里可扫的雪点
-      this.snowSpots = [];
-      // 院子中间的石板地
-      for (let row = 0; row < 4; row++) {
-        for (let col = 0; col < 9; col++) {
-          this.snowSpots.push([-1.62 + col * .96, 1.02 + row * .42]);
-        }
+      const foodStart = mesh.data.length / 9;
+      foodTable(mesh,term);
+      this.foodRange = [foodStart, mesh.data.length / 9];
+      // 镰刀只在秋天的院子里出现
+      if (term === "dew") {
+        const sickleStart = mesh.data.length / 9;
+        sickleProp(mesh);
+        this.sickleRange = [sickleStart, mesh.data.length / 9];
+      } else {
+        this.sickleRange = null;
       }
-      // 门前那一排石阶
-      for (let col = 0; col < 12; col++) {
-        this.snowSpots.push([-1.45 + col * .66, .80]);
-      }
-      // 火塘周围一圈不落雪
-      this.snowSpots = this.snowSpots.filter(([sx, sz]) => Math.hypot(sx - campfire.x, sz - campfire.z) > 1.05);
-      // 田边那条石板小路（石心 x=7.05）
-      for (let k = 0; k < 24; k++) {
-        this.snowSpots.push([7.05 + variation(k + 3) * .06, 2.86 + k * .48]);
-      }
-      this.swept = [];
-    } else {
-      this.broomRange = null;
-      this.snowSpots = [];
-      this.swept = [];
-    }
-    this.sweepMode = false;
-    this.sweepSwing = null;
-    this.sweepStance = null;
       porchSupplies(mesh,term);
       waterWell(mesh);
       bambooFence(mesh,-1.62,2.01,15.20);
@@ -2692,12 +2810,31 @@
       this.upload(this.world,mesh,false);
       this.landData=this.world.data.subarray(0,this.landCount*9);
       this.waterData=this.world.data.subarray(this.landCount*9);
-      this.shadows=lightMap(this.landData,shadowLength,term);
+      this.dynamicShadowRanges = [];
+      if (term === "dew") {
+        for (const r of cropRanges) this.dynamicShadowRanges.push(r);
+        if (this.sickleRange) this.dynamicShadowRanges.push(this.sickleRange);
+      } else if (term === "winter") {
+        for (const r of cakeRanges) this.dynamicShadowRanges.push(r);
+      }
+      this.shadows=lightMap(this.landData,shadowLength,term,this.dynamicShadowRanges);
+      this.staticShadowPixels=this.shadows.staticBase;
       this.lampPower=new Float32Array(this.shadows.practicalPower);
       this.uploadShadows();
       this.act(0,0);
       this.render();
       if (this.motion) this.queueFrame();
+    }
+
+    rebuildShadows() {
+      if (!this.landData || !this.term) return;
+      const stubbleData = this.term === "dew" ? buildStubbleMesh(this.harvested) : null;
+      this.shadows = lightMap(
+        this.landData, this.shadowLength, this.term,
+        this.dynamicShadowRanges, this.staticShadowPixels, stubbleData
+      );
+      this.uploadShadows();
+      if (this.software) this.software.world = null;
     }
 
     uploadShadows() {
@@ -2716,54 +2853,84 @@
       const basePower = this.shadows.practicalPower;
       this.lampPower[0] = basePower[0] * (1 + .05 * Math.sin(time * 3.1));
       this.lampPower[1] = basePower[1] * (1 + .05 * Math.sin(time * 2.7 + 1.4));
-      // 扫雪模式下，墙上那把扫把收起来（在农夫手里）
-      if (this.sweepMode && this.broomRange && this.world && this.world.data) {
-        const bdata = this.world.data;
-        let btouched = false;
-        for (let v = this.broomRange[0]; v < this.broomRange[1]; v++) {
-          if (bdata[v * 9 + 1] > -9000) { bdata[v * 9 + 1] = -9999; btouched = true; }
-        }
-        if (btouched) this.uploadGpuBuffer(this.world, false);
-      }
-      // 抢收模式下，门口那把镰刀收起来（在农夫手里）
-      if (this.harvestMode && this.sickleRange && this.world && this.world.data) {
-        const data = this.world.data;
-        let touched = false;
-        for (let v = this.sickleRange[0]; v < this.sickleRange[1]; v++) {
-          if (data[v * 9 + 1] > -9000) { data[v * 9 + 1] = -9999; touched = true; }
-        }
-        if (touched) this.uploadGpuBuffer(this.world, false);
-      }
-      // 收割：农夫走过去、挥镰、留一茬秸秆
+      const dewGroundAt = (px, pz) =>
+        px >= plot.left && px <= plot.right && pz >= plot.near && pz <= plot.far ? .275 : .245;
+      // 收割：农夫轻快小跑过去、挥镰连割两下、镰落稻倒并迸出稻屑留茬
       const swing = this.harvestSwing;
-      if (swing) {
-        const t = time - swing.start;
-        if (t > 3.2) {
+      if (swing && this.term === "dew") {
+        const t = Math.max(0, time - swing.start);
+        const totalDur = swing.walkDur + swing.swingDur;
+        if (t >= totalDur) {
+          if (!swing.applied && swing.pending) {
+            swing.applied = true;
+            this.applyHarvestBatch(swing.pending);
+          }
+          this.harvestStance = { x: swing.x, z: swing.z, faceX: swing.faceX, faceZ: swing.faceZ };
           this.harvestSwing = null;
-          this.harvestStance = [swing.x, swing.z];
-        }
-        else {
+        } else {
           const f = this.farmer;
-          const walk = Math.min(1, t / 1.15);
-          const ease = walk * walk * (3 - 2 * walk);
-          const from = this.harvestStance || [f.x, f.z];
-          f.flip = swing.x < from[0];
-          f.x = from[0] + (swing.x - from[0]) * ease;
-          f.z = from[1] + (swing.z - from[1]) * ease;
-          f.y = shallowWater.height + .02;
-          f.lift = 0;
           f.row = 4;
-          if (t > 1.15) {
-            const phase = (t - 1.15) * 3.4;
-            f.frame = [0,1,2,3][Math.floor(phase) % 4];
-            f.stretch = .96 + Math.sin(phase * 3.1) * .018;
+          f.faceX = swing.faceX;
+          f.faceZ = swing.faceZ;
+          if (t < swing.walkDur) {
+            const u = t / swing.walkDur;
+            const ease = u * u * (3 - 2 * u);
+            f.x = swing.fromX + (swing.x - swing.fromX) * ease;
+            f.z = swing.fromZ + (swing.z - swing.fromZ) * ease;
+            f.y = dewGroundAt(f.x, f.z);
+            const hops = Math.max(1, Math.round(swing.walkDist / 1.15));
+            const hopWave = Math.abs(Math.sin(u * Math.PI * hops));
+            f.lift = hopWave * .11;
+            f.stretch = .96 + hopWave * .05;
+            f.frame = Math.floor(u * hops * 2) % 2 ? 1 : 0;
           } else {
-            f.frame = 0;
+            const s = (t - swing.walkDur) / swing.swingDur;
+            f.x = swing.x;
+            f.z = swing.z;
+            f.y = dewGroundAt(f.x, f.z);
+            f.lift = 0;
+            const seq = [1, 2, 3, 1, 2, 3, 0];
+            f.frame = seq[Math.min(seq.length - 1, Math.floor(s * seq.length))];
+            f.stretch = f.frame === 2 ? .93 : f.frame === 1 ? 1.03 : .98;
+            if (s >= .18 && !swing.applied && swing.pending) {
+              swing.applied = true;
+              this.applyHarvestBatch(swing.pending);
+              if (!this.harvestChaff) this.harvestChaff = [];
+              this.harvestChaff.push({ x: swing.cutX, z: swing.cutZ, start: time });
+            }
           }
         }
       }
+      // 挥镰激起的飞散金黄稻屑与短秆
+      if (this.term === "dew" && this.harvestChaff && this.harvestChaff.length) {
+        const keep = [];
+        for (const burst of this.harvestChaff) {
+          const age = time - burst.start;
+          if (age < 0 || age > .72) continue;
+          keep.push(burst);
+          const p = age / .72;
+          for (let i = 0; i < 12; i++) {
+            const ang = variation(i * 17 + 3) * Math.PI * 2;
+            const spd = .55 + variation(i * 23 + 11) * 1.15;
+            const px = burst.x + Math.cos(ang) * spd * p;
+            const pz = burst.z + Math.sin(ang) * spd * p;
+            const py = .36 + (1.05 + variation(i * 31) * .55) * p - 1.55 * p * p;
+            if (py < .28) continue;
+            const len = .10 * (1 - p * .45);
+            const dx = Math.cos(ang + p * 4) * len;
+            const dz = Math.sin(ang + p * 4) * len;
+            const tone = i % 3 === 0 ? "fae074" : i % 3 === 1 ? "e0b640" : "c9a038";
+            mesh.face([
+              [px - dx, py, pz - dz],
+              [px + dx, py + .025, pz + dz],
+              [px + dx * .3, py + .055, pz - dz * .4]
+            ], tone);
+          }
+        }
+        this.harvestChaff = keep;
+      }
       // 火塘石头上的糍粑
-      if (this.roasting && this.roasting.length) {
+      if (this.term === "winter" && this.roasting && this.roasting.length) {
         const spots = [[-.44, .02], [.04, -.44], [.44, .04]];
         for (let i = 0; i < this.roasting.length; i++) {
           const [dx, dz] = spots[i % 3];
@@ -2775,76 +2942,6 @@
           }
         }
       }
-      // 走回火堆
-      if (this.fireWalk) {
-        const t = time - this.fireWalk.start;
-        const f = this.farmer;
-        if (t > .85) {
-          this.fireWalk = null;
-        } else {
-          const ease = Math.min(1, t / .8);
-          const e2 = ease * ease * (3 - 2 * ease);
-          const [fx0, fz0] = this.fireWalk.from;
-          f.x = fx0 + (campfire.x + .70 - fx0) * e2;
-          f.z = fz0 + (campfire.z + .55 - fz0) * e2;
-          f.y = campfire.ground;
-          f.lift = 0;
-          f.row = 3;
-          f.frame = [0,1,2,1][Math.floor(t * 6) % 4];
-        }
-      }
-      // 扫雪：农夫走过去、摆动扫把、把雪扫开
-      const sweep = this.sweepSwing;
-      if (sweep && this.term === "winter") {
-        const t = time - sweep.start;
-        const f = this.farmer;
-        if (t > 2.8) {
-          this.sweepSwing = null;
-          this.sweepStance = [sweep.x, sweep.z];
-        } else {
-          const walk = Math.min(1, t / 1.05);
-          const ease = walk * walk * (3 - 2 * walk);
-          const from = this.sweepStance || [f.x, f.z];
-          f.flip = sweep.x - .30 < from[0];
-          f.x = from[0] + (sweep.x - .30 - from[0]) * ease;
-          f.z = from[1] + (sweep.z - from[1]) * ease;
-          f.y = .265;
-          f.lift = 0;
-          f.row = 2;
-          if (t > 1.05) {
-            const phase = (t - 1.05) * 3.2;
-            f.frame = [0,1,2,3][Math.floor(phase) % 4];
-            f.stretch = .96 + Math.sin(phase * 3) * .02;
-          } else {
-            f.frame = 0;
-          }
-        }
-      }
-      if (this.sweepMode && this.sweepStance && !this.sweepSwing && this.term === "winter") {
-        const [sx, sz] = this.sweepStance;
-        const f = this.farmer;
-        f.x = sx - .30; f.z = sz; f.y = .265;
-        f.lift = 0; f.row = 2;
-        f.frame = [0,1,2,1][Math.floor(farmerTime * 3.4) % 4];
-        f.stretch = .97 + Math.sin(farmerTime * 3.2) * .014;
-      }
-      // 冬天的雪：门口、小路上铺一层不规则的雪块，扫过就没了
-      if (this.term === "winter" && this.snowSpots) {
-        const swept = this.swept || [];
-        const done = (sx, sz) => swept.some(([qx, qz]) => Math.abs(qx - sx) < .02 && Math.abs(qz - sz) < .02);
-        for (let i = 0; i < this.snowSpots.length; i++) {
-          const [sx, sz] = this.snowSpots[i];
-          if (done(sx, sz)) {
-            // 扫开后：露出石板，旁边一小堆雪
-            mesh.box(sx, .288, sz, .46, .008, .26, "bfb396", "a2967b");
-            mesh.canopy(sx + .26, .296, sz + .12, .10 + variation(i + 11) * .05, "eaf2f8", .5);
-            continue;
-          }
-          mesh.canopy(sx, .292, sz, .23 + variation(i) * .13, "eef4f8", .55);
-          mesh.canopy(sx + .16, .294, sz + .09, .15 + variation(i + 3) * .10, "e3ecf4", .55);
-          mesh.canopy(sx - .13, .293, sz - .07, .12 + variation(i + 7) * .09, "f5f9fc", .55);
-        }
-      }
       for (const [hx, hz] of this.harvested || []) {
         for (let k = -3; k <= 3; k++) {
           blade(mesh, hx + k * .034, hz + Math.abs(k) * .024, .13 + variation((k + 4) * 9) * .06,
@@ -2852,16 +2949,18 @@
         }
         mesh.box(hx, .263, hz, .13, .012, .13, "8f7a4e", "7c6a44");
       }
-      if (this.harvestMode && this.farmer) {
-      }
-      if (this.harvestMode && this.harvestStance && !this.harvestSwing && this.farmer) {
-        const [sx, sz] = this.harvestStance;
+      if (this.harvestMode && this.term === "dew" && !this.harvestSwing && this.farmer) {
+        const st = this.harvestStance || { x: this.farmer.x, z: this.farmer.z, faceX: -.75, faceZ: .65 };
         const f = this.farmer;
-        f.x = sx; f.z = sz; f.y = shallowWater.height + .02;
+        f.x = st.x;
+        f.z = st.z;
+        f.y = dewGroundAt(st.x, st.z);
         f.lift = 0;
         f.row = 4;
-        f.frame = [0,1,2,1][Math.floor(farmerTime * 4) % 4];
-        f.stretch = .97 + Math.sin(farmerTime * 3.4) * .015;
+        f.frame = 0;
+        f.faceX = st.faceX;
+        f.faceZ = st.faceZ;
+        f.stretch = 1 + Math.sin(farmerTime * 3.0) * .014;
       }
       if (this.term==="dew" && !this.harvestMode) farmerLeafSweep(mesh,this.farmer,farmerTime);
       chickens(mesh,this.term,time);
@@ -2940,6 +3039,8 @@
       const cy=Math.cos(this.pitch), sy=Math.sin(this.pitch);
       if (this.term==="winter") {
         pose={...pose,flip:(campfire.x-pose.x)*cx-(campfire.z-pose.z)*sx<0};
+      } else if (pose.faceX !== undefined) {
+        pose={...pose,flip:pose.faceX*cx-pose.faceZ*sx<0};
       }
       const feet=pose.y+pose.lift;
       const scale=.01475;
@@ -3050,10 +3151,6 @@
       if (this.onFireView && (changedView || this.fireGeometry!==this.landData)) {
         this.fireGeometry=this.landData;
         this.onFireView(this.fireProjection());
-      }
-      if (this.onBroomView && (changedView || this.broomGeometry!==this.landData)) {
-        this.broomGeometry=this.landData;
-        this.onBroomView(this.broomProjection());
       }
       if (this.onSickleView && (changedView || this.sickleGeometry!==this.landData)) {
         this.sickleGeometry=this.landData;
