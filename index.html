@@ -119,7 +119,20 @@
       <canvas id="yard" tabindex="0" aria-label="三维农家小院。拖动旋转，滚动缩放，右键拖动平移，键盘方向键旋转。"></canvas>
       <svg id="crop-hotspots" aria-hidden="true" hidden>
         <g id="crop-outlines"></g>
-      </svg>      <svg id="food-hotspots" aria-hidden="true" hidden>
+      </svg>
+      <svg id="fire-hotspots" aria-hidden="true" hidden>
+        <path id="fire-outline-edge"/>
+        <path id="fire-outline"/>
+      </svg>
+      <svg id="broom-hotspots" aria-hidden="true" hidden>
+        <path id="broom-outline-edge"/>
+        <path id="broom-outline"/>
+      </svg>
+      <svg id="sickle-hotspots" aria-hidden="true" hidden>
+        <path id="sickle-outline-edge"/>
+        <path id="sickle-outline"/>
+      </svg>
+      <svg id="food-hotspots" aria-hidden="true" hidden>
         <path id="food-outline-edge"/>
         <path id="food-outline"/>
       </svg>      <svg id="yard-hotspots" aria-hidden="true" hidden>
@@ -128,6 +141,9 @@
         <path id="gnomon-measure"/>
       </svg>
       <button id="gnomon-target" type="button" aria-label="观察立杆与正午日影" aria-controls="gnomon-inspect" aria-expanded="false" hidden></button>
+      <button id="fire-target" type="button" aria-label="看看火塘" aria-controls="fire-inspect" aria-expanded="false" hidden></button>
+      <button id="broom-target" type="button" aria-label="看看门边那把竹扫把" aria-controls="broom-inspect" aria-expanded="false" hidden></button>
+      <button id="sickle-target" type="button" aria-label="看看门边那把镰刀" aria-controls="sickle-inspect" aria-expanded="false" hidden></button>
       <button id="food-target" type="button" aria-label="看看这张桌上的时令吃食" aria-controls="food-inspect" aria-expanded="false" hidden></button>
       <button id="crop-target" type="button" aria-label="看看田里的庄稼" aria-controls="crop-inspect" aria-expanded="false" hidden></button>
       <p class="renderer-message" id="renderer-message" hidden>浏览器暂时无法显示三维场景。</p>
@@ -143,11 +159,44 @@
         <span>正午影长</span><output id="gnomon-length"></output>
         <span class="gnomon-altitude">正午仰角 <output id="gnomon-altitude"></output></span>
       </p>
-      <p id="gnomon-note">同一地点，正午太阳越高，竿影越短。</p>
+      <p id="gnomon-note">同一片院子，日头爬得越高，影子缩得越短。一年里最长和最短的影子，都落在这根杆子上。</p>
     </section>
-    <section id="crop-inspect" class="gnomon-inspect food-inspect" aria-labelledby="crop-heading" hidden>
+    <section id="fire-inspect" class="gnomon-inspect food-inspect" aria-labelledby="fire-heading" hidden>
       <header>
-        <h2 id="crop-heading">田里</h2>
+        <h2 id="fire-heading">围炉煨糍</h2>
+        <button id="fire-return" type="button" aria-label="收起" title="收起">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18"/></svg>
+        </button>
+      </header>
+      <p class="food-kicker">小雪 · 围炉</p>
+      <p class="food-name">一炉炭火</p>
+      <p id="fire-note">柴烧到透红，炭火正温。把糍粑搁在灶石上，等它慢慢鼓起来、裂开一道口，掰开蘸糖。一炉火，一院人，冬天就这么过去了。</p>
+      <button id="roast-start" type="button">搁一块糍粑</button>
+    </section>    <section id="broom-inspect" class="gnomon-inspect food-inspect" aria-labelledby="broom-heading" hidden>
+      <header>
+        <h2 id="broom-heading">扫雪清路</h2>
+        <button id="broom-return" type="button" aria-label="收起" title="收起">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18"/></svg>
+        </button>
+      </header>
+      <p class="food-kicker">小雪 · 扫雪</p>
+      <p class="food-name">墙边一把扫帚</p>
+      <p id="broom-note">一夜北风，院子就白了。雪不扫，日头一晒化开、夜里又冻上，第二天结成冰，走一步滑一步。老规矩：雪一停，先把门前这条路扫出来。</p>
+      <button id="sweep-start" type="button">出门扫雪</button>
+    </section>    <section id="sickle-inspect" class="gnomon-inspect food-inspect" aria-labelledby="sickle-heading" hidden>
+      <header>
+        <h2 id="sickle-heading">开镰割稻</h2>
+        <button id="sickle-return" type="button" aria-label="收起" title="收起">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18"/></svg>
+        </button>
+      </header>
+      <p class="food-kicker">寒露 · 开镰</p>
+      <p class="food-name">墙边一把镰</p>
+      <p id="sickle-note">稻穗压弯了秆，谷粒捏着发硬，田里早断了水，就等这一刀。霜降前收不完，一场早霜，一季白种。</p>
+      <button id="harvest-start" class="harvest-start" type="button">下田开镰</button>
+    </section>    <section id="crop-inspect" class="gnomon-inspect food-inspect" aria-labelledby="crop-heading" hidden>
+      <header>
+        <h2 id="crop-heading">田里庄稼</h2>
         <button id="crop-return" type="button" aria-label="收起" title="收起">
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18"/></svg>
         </button>
@@ -157,7 +206,7 @@
       <p id="crop-note"></p>
     </section>    <section id="food-inspect" class="gnomon-inspect food-inspect" aria-labelledby="food-heading" hidden>
       <header>
-        <h2 id="food-heading">时令吃食</h2>
+        <h2 id="food-heading">案上时令</h2>
         <button id="food-return" type="button" aria-label="收起" title="收起">
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18"/></svg>
         </button>
@@ -265,6 +314,10 @@
   <script src="app.js"></script>
 </body>
 </html>
+
+
+
+
 
 
 

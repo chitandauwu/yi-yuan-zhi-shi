@@ -515,6 +515,7 @@
 
   let cropHulls = [];
   let cropCentres = [];
+let cropIndices = [];
 
   function pointInHull(px, py, hull) {
     if (!hull || hull.length < 3) return false;
@@ -607,7 +608,25 @@
     return top.concat(bottom.reverse());
   }
 
+  // 鼠标下面是哪一株（返回作物下标，没有则 -1）
+  function plantAt(event) {
+    const rect = canvas.getBoundingClientRect();
+    const px = event.clientX - rect.left, py = event.clientY - rect.top;
+    for (let k = cropCentres.length - 1; k >= 0; k--) {
+      const [cx, cy, r] = cropCentres[k];
+      if (Math.hypot(px - cx, py - cy) <= r + 14) return cropIndices[k];
+    }
+    return -1;
+  }
+
   function updateCropProjection(projection) {
+    if (document.body.classList.contains("harvest-mode")) {
+      cropOutlines.textContent = "";
+      cropLayer.toggleAttribute("hidden", true);
+      if (cropTarget) cropTarget.hidden = true;
+      cropHulls = []; cropCentres = []; cropIndices = [];
+      return;
+    }
     if (!projection) {
       cropLayer.toggleAttribute("hidden", true);
       if (cropTarget) cropTarget.hidden = true;
@@ -615,6 +634,7 @@
     }
     cropHulls = [];
     cropCentres = [];
+    cropIndices = projection.indices ? projection.indices.slice() : [];
     cropOutlines.textContent = "";
     if (document.body.dataset.season === "rain") {
       const silhouette = silhouettePath(scene?.treeSilhouette(), 1.5);
@@ -707,6 +727,238 @@
 
   showTerm("grain");
 
+  // —— 门口的镰刀：描边 → 拉近 → 抢收 ——
+  const sickleLayer = document.querySelector("#sickle-hotspots");
+  const sickleOutline = document.querySelector("#sickle-outline");
+  const sickleOutlineEdge = document.querySelector("#sickle-outline-edge");
+  const sickleTarget = document.querySelector("#sickle-target");
+  const sicklePanel = document.querySelector("#sickle-inspect");
+  const harvestButton = document.querySelector("#harvest-start");
+
+  function updateSickleProjection(projection) {
+    if (!sickleLayer) return;
+    if (!projection) {
+      sickleLayer.toggleAttribute("hidden", true);
+      if (sickleTarget) sickleTarget.hidden = true;
+      return;
+    }
+    const silhouette = silhouettePath(scene?.sickleSilhouette(), 1.4);
+    if (silhouette) {
+      sickleOutline.setAttribute("d", silhouette);
+      sickleOutlineEdge.setAttribute("d", silhouette);
+    }
+    sickleLayer.toggleAttribute("hidden", false);
+    const xs = projection.outline.map(([x]) => x);
+    const ys = projection.outline.map(([, y]) => y);
+    const left = Math.min(...xs), top = Math.min(...ys);
+    if (sickleTarget) {
+      sickleTarget.hidden = false;
+      Object.assign(sickleTarget.style, {
+        left: (left - 10) + "px",
+        top: (top - 8) + "px",
+        width: (Math.max(...xs) - left + 20) + "px",
+        height: (Math.max(...ys) - top + 16) + "px"
+      });
+    }
+  }
+
+  function openSickle() {
+    if (!sicklePanel) return;
+    closeFood(); closeCrop(); closeBroom(); closeFire();
+    sicklePanel.hidden = false;
+    if (harvestButton) {
+      harvestButton.textContent = document.body.classList.contains("harvest-mode") ? "结束抢收" : "开始抢收";
+    }
+    sickleTarget.setAttribute("aria-expanded", "true");
+    scene?.focusSickle();
+  }
+
+  function closeSickle() {
+    if (!sicklePanel || sicklePanel.hidden) return;
+    sicklePanel.hidden = true;
+    sickleTarget?.setAttribute("aria-expanded", "false");
+    scene?.releaseSickle();
+  }
+
+  sickleTarget?.addEventListener("click", () => {
+    sicklePanel.hidden ? openSickle() : closeSickle();
+  });
+  document.querySelector("#sickle-return")?.addEventListener("click", closeSickle);
+  document.addEventListener("keydown", event => {
+    if (event.key !== "Escape") return;
+    if (document.body.classList.contains("sweep-mode")) setSweepMode(false);
+    else if (document.body.classList.contains("harvest-mode")) setHarvestMode(false);
+    else { closeSickle(); closeBroom(); closeFire(); }
+  });
+
+  function setHarvestMode(on) {
+    document.body.classList.toggle("harvest-mode", on);
+    scene?.setHarvestMode(on);
+    // 抢收时不再显示作物圈：整块田都能割，圈反而干扰
+    if (on) {
+      cropOutlines.textContent = "";
+      cropLayer.toggleAttribute("hidden", true);
+      if (cropTarget) cropTarget.hidden = true;
+      cropHulls = [];
+      cropCentres = [];
+      cropIndices = [];
+    } else if (scene) {
+      updateCropProjection(scene.cropProjection());
+    }
+  }
+
+  harvestButton?.addEventListener("click", () => {
+    const on = !document.body.classList.contains("harvest-mode");
+    closeSickle();
+    setHarvestMode(on);
+  });
+
+  // —— 冬天的竹扫把：描边 → 拉近 → 扫雪 ——
+  const broomLayer = document.querySelector("#broom-hotspots");
+  const broomOutline = document.querySelector("#broom-outline");
+  const broomOutlineEdge = document.querySelector("#broom-outline-edge");
+  const broomTarget = document.querySelector("#broom-target");
+  const broomPanel = document.querySelector("#broom-inspect");
+  const sweepButton = document.querySelector("#sweep-start");
+
+  function updateBroomProjection(projection) {
+    if (!broomLayer) return;
+    if (!projection) {
+      broomLayer.toggleAttribute("hidden", true);
+      if (broomTarget) broomTarget.hidden = true;
+      return;
+    }
+    const silhouette = silhouettePath(scene?.broomSilhouette(), 1.4);
+    if (silhouette) {
+      broomOutline.setAttribute("d", silhouette);
+      broomOutlineEdge.setAttribute("d", silhouette);
+    }
+    broomLayer.toggleAttribute("hidden", false);
+    const xs = projection.outline.map(([x]) => x);
+    const ys = projection.outline.map(([, y]) => y);
+    const left = Math.min(...xs), top = Math.min(...ys);
+    if (broomTarget) {
+      broomTarget.hidden = false;
+      Object.assign(broomTarget.style, {
+        left: (left - 10) + "px",
+        top: (top - 8) + "px",
+        width: (Math.max(...xs) - left + 20) + "px",
+        height: (Math.max(...ys) - top + 16) + "px"
+      });
+    }
+  }
+
+  function openBroom() {
+    if (!broomPanel) return;
+    closeFood(); closeCrop(); closeSickle(); closeFire();
+    broomPanel.hidden = false;
+    if (sweepButton) {
+      sweepButton.textContent = document.body.classList.contains("sweep-mode") ? "结束扫雪" : "开始扫雪";
+    }
+    broomTarget.setAttribute("aria-expanded", "true");
+    scene?.focusBroom();
+  }
+
+  function closeBroom() {
+    if (!broomPanel || broomPanel.hidden) return;
+    broomPanel.hidden = true;
+    broomTarget?.setAttribute("aria-expanded", "false");
+    scene?.releaseBroom();
+  }
+
+  broomTarget?.addEventListener("click", () => {
+    broomPanel.hidden ? openBroom() : closeBroom();
+  });
+  document.querySelector("#broom-return")?.addEventListener("click", closeBroom);
+
+  function setSweepMode(on) {
+    document.body.classList.toggle("sweep-mode", on);
+    scene?.setSweepMode(on);
+    if (on) {
+      cropOutlines.textContent = "";
+      cropLayer.toggleAttribute("hidden", true);
+      if (cropTarget) cropTarget.hidden = true;
+      cropHulls = []; cropCentres = []; cropIndices = [];
+    } else if (scene) {
+      updateCropProjection(scene.cropProjection());
+    }
+  }
+
+  sweepButton?.addEventListener("click", () => {
+    const on = !document.body.classList.contains("sweep-mode");
+    closeBroom();
+    setSweepMode(on);
+  });
+
+  if (scene) scene.onSickleView = updateSickleProjection;
+  // —— 火塘：描边 → 拉近 → 烤糍粑 ——
+  const fireLayer = document.querySelector("#fire-hotspots");
+  const fireOutline = document.querySelector("#fire-outline");
+  const fireOutlineEdge = document.querySelector("#fire-outline-edge");
+  const fireTarget = document.querySelector("#fire-target");
+  const firePanel = document.querySelector("#fire-inspect");
+  const roastButton = document.querySelector("#roast-start");
+
+  function updateFireProjection(projection) {
+    if (!fireLayer) return;
+    if (!projection) {
+      fireLayer.toggleAttribute("hidden", true);
+      if (fireTarget) fireTarget.hidden = true;
+      return;
+    }
+    const silhouette = silhouettePath(scene?.fireSilhouette(), 1.4);
+    if (silhouette) {
+      fireOutline.setAttribute("d", silhouette);
+      fireOutlineEdge.setAttribute("d", silhouette);
+    }
+    fireLayer.toggleAttribute("hidden", false);
+    const xs = projection.outline.map(([x]) => x);
+    const ys = projection.outline.map(([, y]) => y);
+    const left = Math.min(...xs), top = Math.min(...ys);
+    if (fireTarget) {
+      fireTarget.hidden = false;
+      Object.assign(fireTarget.style, {
+        left: (left - 12) + "px",
+        top: (top - 10) + "px",
+        width: (Math.max(...xs) - left + 24) + "px",
+        height: (Math.max(...ys) - top + 20) + "px"
+      });
+    }
+  }
+
+  function openFire() {
+    if (!firePanel) return;
+    // 正在扫雪时点火塘：退出扫雪，人走回火边
+    if (document.body.classList.contains("sweep-mode")) {
+      scene?.returnToFire();
+      setSweepMode(false);
+    }
+    closeFood(); closeCrop(); closeSickle(); closeBroom();
+    firePanel.hidden = false;
+    fireTarget.setAttribute("aria-expanded", "true");
+    scene?.focusFire();
+  }
+  function closeFire() {
+    if (!firePanel || firePanel.hidden) return;
+    firePanel.hidden = true;
+    fireTarget?.setAttribute("aria-expanded", "false");
+    scene?.releaseFire();
+  }
+
+  fireTarget?.addEventListener("click", () => {
+    firePanel.hidden ? openFire() : closeFire();
+  });
+  document.querySelector("#fire-return")?.addEventListener("click", closeFire);
+  roastButton?.addEventListener("click", () => {
+    if (scene?.roastCake()) {
+      roastButton.textContent = "再烤一块";
+      roastButton.disabled = false;
+    }
+  });
+
+  if (scene) scene.onBroomView = updateBroomProjection;
+  if (scene) scene.onFireView = updateFireProjection;
+
   if (!scene) return;
 
   function openPoleInspection() {
@@ -754,7 +1006,9 @@
     if ((event.button !== 0 && event.button !== 1 && event.button !== 2) || points.size === 2) return;
     if (event.button === 1) event.preventDefault();
     const poleClick=points.size===0 && event.button===0 && hitsPole(event);
-    const cropClick=!poleClick && points.size===0 && event.button===0 && hitsCrop(event);
+    const cropClick=!poleClick && points.size===0 && event.button===0 &&
+      (hitsCrop(event) || document.body.classList.contains("harvest-mode") ||
+        document.body.classList.contains("sweep-mode"));
     for (const point of points.values()) point.poleClick=false;
     points.set(event.pointerId,{x:event.clientX,y:event.clientY,pan:event.button!==0,poleClick,cropClick});
     canvas.setPointerCapture(event.pointerId);
@@ -812,7 +1066,32 @@
       const still = Math.hypot(event.clientX-point.x,event.clientY-point.y)<5;
       if (type==="pointerup" && still) {
         if (point.poleClick && hitsPole(event)) openPoleInspection();
-        else if (point.cropClick && hitsCrop(event)) openCrop();
+        else if (point.cropClick) {
+          if (document.body.classList.contains("sweep-mode")) {
+            const rect = canvas.getBoundingClientRect();
+            const px = event.clientX - rect.left, py = event.clientY - rect.top;
+            const fire = scene ? scene.campfireScreen() : null;
+            const box = scene ? scene.fireHitBox() : null;
+            const onFire = (box && px >= box[0] - 14 && px <= box[2] + 14 &&
+              py >= box[1] - 14 && py <= box[3] + 14) ||
+              (fire && Math.hypot(px - fire[0], py - fire[1]) < 30);
+            if (onFire) {
+              scene.returnToFire();
+              setSweepMode(false);
+              openFire();
+              return;
+            }
+            const spot = scene ? scene.snowSpotAt(px, py, 56) : -1;
+            if (spot >= 0) scene.sweepSpot(spot);
+            return;
+          }
+          if (document.body.classList.contains("harvest-mode")) {
+            const rect = canvas.getBoundingClientRect();
+            const index = scene ? scene.plantAtScreen(event.clientX - rect.left, event.clientY - rect.top, 30) : -1;
+            if (index >= 0) { scene.harvestPlant(index); return; }
+          }
+          if (hitsCrop(event)) openCrop();
+        }
       }
     });
   }
