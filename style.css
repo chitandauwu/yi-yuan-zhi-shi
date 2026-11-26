@@ -408,6 +408,7 @@ body.harvest-mode #yard { cursor:crosshair; }
   --dial-reveal:1270ms;
   --interlude-fade:380ms;
   --interlude-exit:560ms;
+  --interlude-ease:cubic-bezier(.65,0,.35,1);
   --travel:calc(var(--entry-direction,1) * clamp(78px,13svh,120px));
   position:fixed; z-index:4; inset:0;
   display:grid; place-items:center; padding:clamp(12px,3vw,36px);
@@ -427,7 +428,7 @@ body.harvest-mode #yard { cursor:crosshair; }
     radial-gradient(ellipse at 32% 47%,#c4dfd91a,transparent 61%),
     linear-gradient(164deg,#070b14 0%,transparent 95%);
   background-size:115px 101px,173px 137px,89px 171px,257px 193px,100% 100%,100% 100%;
-  transition:opacity 580ms cubic-bezier(.4,0,.2,1) 70ms, background-color 360ms ease;
+  transition:opacity 580ms var(--interlude-ease) 70ms, background-color 360ms ease;
 }
 .season-interlude[data-term="rain"] { --wash:#112331; --tint:#d2ecea; }
 .season-interlude[data-term="dew"] { --wash:#2a1d20; --tint:#f4dfba; }
@@ -435,16 +436,16 @@ body.harvest-mode #yard { cursor:crosshair; }
 .season-interlude[data-direction="backward"] { --entry-direction:-1; }
 .season-interlude:is([data-phase="cover"],[data-phase="verse"])::before {
   opacity:1;
-  transition:opacity 340ms cubic-bezier(.32,0,.2,1) 0ms, background-color 320ms ease;
+  transition:opacity 340ms var(--interlude-ease) 0ms, background-color 320ms ease;
 }
 .interlude-landscape {
   position:absolute; inset:0; width:100%; height:100%;
   color:#0a131c; opacity:0; transform:translateY(14px);
-  transition:opacity 520ms cubic-bezier(.4,0,.2,1), transform 560ms cubic-bezier(.4,0,.2,1);
+  transition:opacity 520ms var(--interlude-ease), transform 560ms var(--interlude-ease);
 }
 .season-interlude:is([data-phase="cover"],[data-phase="verse"]) .interlude-landscape {
   opacity:.78; transform:translateY(0);
-  transition:opacity 440ms cubic-bezier(.22,.68,.24,1), transform 540ms cubic-bezier(.22,.78,.24,1);
+  transition:opacity 440ms var(--interlude-ease), transform 540ms var(--interlude-ease);
 }
 .interlude-composition {
   position:relative; width:min(100%,1100px);
@@ -454,11 +455,11 @@ body.harvest-mode #yard { cursor:crosshair; }
 .term-dial {
   width:min(49vw,74svh,590px); height:auto; overflow:visible;
   display:block; opacity:0; transform:scale(.93);
-  transition:opacity var(--interlude-exit) cubic-bezier(.4,0,.2,1), transform var(--interlude-exit) cubic-bezier(.4,0,.2,1);
+  transition:opacity var(--interlude-exit) var(--interlude-ease), transform var(--interlude-exit) var(--interlude-ease);
 }
 .season-interlude:is([data-phase="cover"],[data-phase="verse"]) .term-dial {
   opacity:1; transform:scale(1);
-  transition:opacity var(--interlude-fade) cubic-bezier(.22,.68,.24,1), transform 540ms cubic-bezier(.22,.8,.24,1);
+  transition:opacity var(--interlude-fade) var(--interlude-ease), transform 540ms var(--interlude-ease);
 }
 .dial-ring, .dial-minute-ring, .dial-hub-ring {
   fill:none; stroke:var(--tint);
@@ -515,17 +516,17 @@ body.harvest-mode #yard { cursor:crosshair; }
 .interlude-text {
   opacity:0;
   text-shadow:var(--ui-shadow);
-  transition:opacity 360ms cubic-bezier(.4,0,.2,1), transform 460ms cubic-bezier(.4,0,.2,1);
+  transition:opacity 360ms var(--interlude-ease), transform 460ms var(--interlude-ease);
 }
 .season-interlude:is([data-phase="cover"],[data-phase="verse"]) .interlude-text {
   opacity:1;
   transform:translate(0,0);
-  transition:opacity var(--interlude-fade) cubic-bezier(.22,.68,.24,1), transform 520ms cubic-bezier(.22,.8,.24,1);
+  transition:opacity var(--interlude-fade) var(--interlude-ease), transform 520ms var(--interlude-ease);
 }
 .season-interlude[data-phase="exit"] .interlude-text {
   opacity:0;
   transform:translate(0,calc(-1 * var(--travel)));
-  transition:opacity var(--interlude-exit) cubic-bezier(.4,0,.2,1), transform var(--interlude-exit) cubic-bezier(.4,0,.2,1);
+  transition:opacity var(--interlude-exit) var(--interlude-ease), transform var(--interlude-exit) var(--interlude-ease);
 }
 .interlude-name {
   margin:0;

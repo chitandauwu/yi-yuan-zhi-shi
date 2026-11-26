@@ -702,33 +702,42 @@
     mesh.beam([x, g, z], [topX, topY, topZ], .075, .066, "6b4626");
     mesh.beam([x, g + .02, z], [x + .01, g + .20, z + .005], .098, .090, "51351e");
     mesh.beam([topX - .02, topY - .10, topZ], [topX, topY, topZ], .058, .052, "9a6b3a");
-    // 刃根的铁箍
-    mesh.box(topX, topY - .05, topZ + .01, .075, .075, .075, "8d939a", "71777d");
-    // 刀刃：内半径小、外半径大的一段弯月，用一圈四边形拼出来
-    const hub = [topX + .02, topY - .03, topZ + .02];
-    const steps = 9, R = .46, r = .30, from = -.42, sweep = 2.15;
-    const at = (radius, angle) => [
-      hub[0] + Math.cos(angle) * radius,
-      hub[1] + Math.sin(angle) * radius * .52,
-      hub[2] + .035
-    ];
+    // 铁箍与刀头使用同一个接点，第一截刀刃完整嵌入铁箍，不再悬浮。
+    const root = [topX, topY - .05, topZ + .01];
+    mesh.box(...root, .084, .080, .084, "8d939a", "71777d");
+    // 弯月轮廓从柄顶向右上方展开，双面有厚度，末端自然收窄。
+    const steps = 12, radius = .295, sweep = 2.43;
+    const section = t => {
+      const angle = Math.PI - sweep * t;
+      const half = (.032 + .032 * Math.sin(Math.PI * t)) *
+        (1 - .92 * Math.max(0, (t - .75) / .25));
+      const at = (r, side) => [
+        root[0] + radius + Math.cos(angle) * r,
+        root[1] + Math.sin(angle) * r * .72,
+        root[2] + side * .008
+      ];
+      const outer = radius + half, inner = radius - half;
+      return [at(outer, 1), at(inner, 1), at(outer, -1), at(inner, -1)];
+    };
+    const sections = Array.from({length: steps + 1}, (_, i) => section(i / steps));
     for (let i = 0; i < steps; i++) {
-      const a0 = from + sweep * i / steps, a1 = from + sweep * (i + 1) / steps;
-      const o0 = at(R, a0), o1 = at(R, a1), i0 = at(r, a0), i1 = at(r, a1);
-      const shade = i < steps - 1 ? (i % 2 ? "9aa3ac" : "c3cad2") : "dfe6ec";
-      mesh.face([o0, o1, i1, i0], shade);
-      mesh.face([o0, i0, i1, o1], "6f767d");
+      const [o0, i0, b0, j0] = sections[i], [o1, i1, b1, j1] = sections[i + 1];
+      mesh.face([o0, i0, i1, o1], i % 2 ? "9aa3ac" : "c3cad2");
+      mesh.face([b0, b1, j1, j0], "77828a");
+      mesh.face([o0, o1, b1, b0], "9ba5ae");
+      mesh.face([i0, j0, j1, i1], "dfe6ec");
     }
-    // 刀尖
-    const tipOuter = at(R, from + sweep), tipInner = at(r, from + sweep);
-    mesh.face([tipOuter, tipInner, [hub[0] + Math.cos(from + sweep + .18) * .33,
-      hub[1] + Math.sin(from + sweep + .18) * .33 * .52, hub[2] + .035]], "f2f6f9");
+    for (const [index, reverse] of [[0, false], [steps, true]]) {
+      const [o, i, b, j] = sections[index];
+      const cap = [o, b, j, i];
+      mesh.face(reverse ? cap.reverse() : cap, "a0abb5");
+    }
   }
 
   // —— 门口那张食桌：桌面一张、四条腿，四季换一样吃食 ——
   const foodTableAt = { x: 4.72, z: 1.86, height: .44, top: 1.24, deep: .84 };
-  const FOOD_GROUND = .345;   // 檐前铺地石的高度
-  const FOOD_TOP = FOOD_GROUND + foodTableAt.height + .045;
+  const FOOD_GROUND = .249 + .021 / 2;  // 食桌所在院地铺面，而非檐前台阶
+  const FOOD_TOP = FOOD_GROUND + foodTableAt.height + .07 / 2;
 
   function foodBall(mesh, x, y, z, r, color) {
     mesh.revolved(x, z, [[y - r, 0], [y - r * .5, r * .86], [y + r * .28, r * .74], [y + r, 0]], [color], 9);
@@ -2451,7 +2460,7 @@
       const points = [];
       for (const dx of [-top / 2, top / 2]) {
         for (const dz of [-deep / 2, deep / 2]) {
-          points.push(project(x + dx, g + height, z + dz), project(x + dx, g + height + .07, z + dz));
+          points.push(project(x + dx, g + height - .035, z + dz), project(x + dx, g + height + .035, z + dz));
         }
       }
       for (const [dx, dz] of [[-.38, -.23], [.38, -.23], [-.38, .23], [.38, .23]]) {

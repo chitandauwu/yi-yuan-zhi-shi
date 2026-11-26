@@ -925,8 +925,9 @@
     const step = now => {
       const elapsed = Math.max(0, now - startAt);
       const t = Math.min(1, elapsed / duration);
-      // 非对称缓入缓出：提早显现旋转，字幕退场时仍有缓慢的落位运动。
-      const ease = 1 - (1 - t) ** 2.5 * (1 + 2.5 * t);
+      // 五次 S 曲线：首尾速度和加速度均为零，中段集中完成旋转。
+      // 保留整段 2310ms 时间轴，直到字幕退场结束才完全落位。
+      const ease = t * t * t * (10 + t * (-15 + 6 * t));
       applyDialAngle(startDeg + (endDeg - startDeg) * ease);
       if (t < 1) {
         dialRaf = requestAnimationFrame(step);
@@ -941,8 +942,9 @@
   applyDialAngle(dialAngle);
 
   // 字幕与节气盘共用切换时间轴：入场、场景重建后的观赏停留、同步退场。
-  const interludeTiming = { cover: 370, hold: 1380, enter: 600, exit: 560, reveal: 680 };
+  const interludeTiming = { cover: 370, hold: 1380, enter: 600, exit: 560, reveal: 680, easing: "cubic-bezier(.65,0,.35,1)" };
   interlude.style.setProperty("--interlude-exit", `${interludeTiming.exit}ms`);
+  interlude.style.setProperty("--interlude-ease", interludeTiming.easing);
   let pendingIndex = null;
   let settleTimer;
   let interludeTimer;
@@ -1006,7 +1008,7 @@
       textEntry?.cancel();
       textEntry = interludeText.animate(
         [{opacity:0,transform:"translateY(var(--travel))"},{opacity:1,transform:"translateY(0)"}],
-        {duration:interludeTiming.enter,easing:"cubic-bezier(.22,.8,.24,1)"}
+        {duration:interludeTiming.enter,easing:interludeTiming.easing}
       );
       const exitAt = interludeTiming.cover + interludeTiming.hold;
       animateDialTo(stops[index], exitAt + interludeTiming.exit);

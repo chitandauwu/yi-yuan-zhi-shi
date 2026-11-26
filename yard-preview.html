@@ -417,6 +417,7 @@ body.harvest-mode #yard { cursor:crosshair; }
   --dial-reveal:1270ms;
   --interlude-fade:380ms;
   --interlude-exit:560ms;
+  --interlude-ease:cubic-bezier(.65,0,.35,1);
   --travel:calc(var(--entry-direction,1) * clamp(78px,13svh,120px));
   position:fixed; z-index:4; inset:0;
   display:grid; place-items:center; padding:clamp(12px,3vw,36px);
@@ -436,7 +437,7 @@ body.harvest-mode #yard { cursor:crosshair; }
     radial-gradient(ellipse at 32% 47%,#c4dfd91a,transparent 61%),
     linear-gradient(164deg,#070b14 0%,transparent 95%);
   background-size:115px 101px,173px 137px,89px 171px,257px 193px,100% 100%,100% 100%;
-  transition:opacity 580ms cubic-bezier(.4,0,.2,1) 70ms, background-color 360ms ease;
+  transition:opacity 580ms var(--interlude-ease) 70ms, background-color 360ms ease;
 }
 .season-interlude[data-term="rain"] { --wash:#112331; --tint:#d2ecea; }
 .season-interlude[data-term="dew"] { --wash:#2a1d20; --tint:#f4dfba; }
@@ -444,16 +445,16 @@ body.harvest-mode #yard { cursor:crosshair; }
 .season-interlude[data-direction="backward"] { --entry-direction:-1; }
 .season-interlude:is([data-phase="cover"],[data-phase="verse"])::before {
   opacity:1;
-  transition:opacity 340ms cubic-bezier(.32,0,.2,1) 0ms, background-color 320ms ease;
+  transition:opacity 340ms var(--interlude-ease) 0ms, background-color 320ms ease;
 }
 .interlude-landscape {
   position:absolute; inset:0; width:100%; height:100%;
   color:#0a131c; opacity:0; transform:translateY(14px);
-  transition:opacity 520ms cubic-bezier(.4,0,.2,1), transform 560ms cubic-bezier(.4,0,.2,1);
+  transition:opacity 520ms var(--interlude-ease), transform 560ms var(--interlude-ease);
 }
 .season-interlude:is([data-phase="cover"],[data-phase="verse"]) .interlude-landscape {
   opacity:.78; transform:translateY(0);
-  transition:opacity 440ms cubic-bezier(.22,.68,.24,1), transform 540ms cubic-bezier(.22,.78,.24,1);
+  transition:opacity 440ms var(--interlude-ease), transform 540ms var(--interlude-ease);
 }
 .interlude-composition {
   position:relative; width:min(100%,1100px);
@@ -463,11 +464,11 @@ body.harvest-mode #yard { cursor:crosshair; }
 .term-dial {
   width:min(49vw,74svh,590px); height:auto; overflow:visible;
   display:block; opacity:0; transform:scale(.93);
-  transition:opacity var(--interlude-exit) cubic-bezier(.4,0,.2,1), transform var(--interlude-exit) cubic-bezier(.4,0,.2,1);
+  transition:opacity var(--interlude-exit) var(--interlude-ease), transform var(--interlude-exit) var(--interlude-ease);
 }
 .season-interlude:is([data-phase="cover"],[data-phase="verse"]) .term-dial {
   opacity:1; transform:scale(1);
-  transition:opacity var(--interlude-fade) cubic-bezier(.22,.68,.24,1), transform 540ms cubic-bezier(.22,.8,.24,1);
+  transition:opacity var(--interlude-fade) var(--interlude-ease), transform 540ms var(--interlude-ease);
 }
 .dial-ring, .dial-minute-ring, .dial-hub-ring {
   fill:none; stroke:var(--tint);
@@ -524,17 +525,17 @@ body.harvest-mode #yard { cursor:crosshair; }
 .interlude-text {
   opacity:0;
   text-shadow:var(--ui-shadow);
-  transition:opacity 360ms cubic-bezier(.4,0,.2,1), transform 460ms cubic-bezier(.4,0,.2,1);
+  transition:opacity 360ms var(--interlude-ease), transform 460ms var(--interlude-ease);
 }
 .season-interlude:is([data-phase="cover"],[data-phase="verse"]) .interlude-text {
   opacity:1;
   transform:translate(0,0);
-  transition:opacity var(--interlude-fade) cubic-bezier(.22,.68,.24,1), transform 520ms cubic-bezier(.22,.8,.24,1);
+  transition:opacity var(--interlude-fade) var(--interlude-ease), transform 520ms var(--interlude-ease);
 }
 .season-interlude[data-phase="exit"] .interlude-text {
   opacity:0;
   transform:translate(0,calc(-1 * var(--travel)));
-  transition:opacity var(--interlude-exit) cubic-bezier(.4,0,.2,1), transform var(--interlude-exit) cubic-bezier(.4,0,.2,1);
+  transition:opacity var(--interlude-exit) var(--interlude-ease), transform var(--interlude-exit) var(--interlude-ease);
 }
 .interlude-name {
   margin:0;
@@ -2009,33 +2010,42 @@ document.getElementById("farmer-atlas").src = "data:image/webp;base64,UklGRpg7AA
     mesh.beam([x, g, z], [topX, topY, topZ], .075, .066, "6b4626");
     mesh.beam([x, g + .02, z], [x + .01, g + .20, z + .005], .098, .090, "51351e");
     mesh.beam([topX - .02, topY - .10, topZ], [topX, topY, topZ], .058, .052, "9a6b3a");
-    // 刃根的铁箍
-    mesh.box(topX, topY - .05, topZ + .01, .075, .075, .075, "8d939a", "71777d");
-    // 刀刃：内半径小、外半径大的一段弯月，用一圈四边形拼出来
-    const hub = [topX + .02, topY - .03, topZ + .02];
-    const steps = 9, R = .46, r = .30, from = -.42, sweep = 2.15;
-    const at = (radius, angle) => [
-      hub[0] + Math.cos(angle) * radius,
-      hub[1] + Math.sin(angle) * radius * .52,
-      hub[2] + .035
-    ];
+    // 铁箍与刀头使用同一个接点，第一截刀刃完整嵌入铁箍，不再悬浮。
+    const root = [topX, topY - .05, topZ + .01];
+    mesh.box(...root, .084, .080, .084, "8d939a", "71777d");
+    // 弯月轮廓从柄顶向右上方展开，双面有厚度，末端自然收窄。
+    const steps = 12, radius = .295, sweep = 2.43;
+    const section = t => {
+      const angle = Math.PI - sweep * t;
+      const half = (.032 + .032 * Math.sin(Math.PI * t)) *
+        (1 - .92 * Math.max(0, (t - .75) / .25));
+      const at = (r, side) => [
+        root[0] + radius + Math.cos(angle) * r,
+        root[1] + Math.sin(angle) * r * .72,
+        root[2] + side * .008
+      ];
+      const outer = radius + half, inner = radius - half;
+      return [at(outer, 1), at(inner, 1), at(outer, -1), at(inner, -1)];
+    };
+    const sections = Array.from({length: steps + 1}, (_, i) => section(i / steps));
     for (let i = 0; i < steps; i++) {
-      const a0 = from + sweep * i / steps, a1 = from + sweep * (i + 1) / steps;
-      const o0 = at(R, a0), o1 = at(R, a1), i0 = at(r, a0), i1 = at(r, a1);
-      const shade = i < steps - 1 ? (i % 2 ? "9aa3ac" : "c3cad2") : "dfe6ec";
-      mesh.face([o0, o1, i1, i0], shade);
-      mesh.face([o0, i0, i1, o1], "6f767d");
+      const [o0, i0, b0, j0] = sections[i], [o1, i1, b1, j1] = sections[i + 1];
+      mesh.face([o0, i0, i1, o1], i % 2 ? "9aa3ac" : "c3cad2");
+      mesh.face([b0, b1, j1, j0], "77828a");
+      mesh.face([o0, o1, b1, b0], "9ba5ae");
+      mesh.face([i0, j0, j1, i1], "dfe6ec");
     }
-    // 刀尖
-    const tipOuter = at(R, from + sweep), tipInner = at(r, from + sweep);
-    mesh.face([tipOuter, tipInner, [hub[0] + Math.cos(from + sweep + .18) * .33,
-      hub[1] + Math.sin(from + sweep + .18) * .33 * .52, hub[2] + .035]], "f2f6f9");
+    for (const [index, reverse] of [[0, false], [steps, true]]) {
+      const [o, i, b, j] = sections[index];
+      const cap = [o, b, j, i];
+      mesh.face(reverse ? cap.reverse() : cap, "a0abb5");
+    }
   }
 
   // —— 门口那张食桌：桌面一张、四条腿，四季换一样吃食 ——
   const foodTableAt = { x: 4.72, z: 1.86, height: .44, top: 1.24, deep: .84 };
-  const FOOD_GROUND = .345;   // 檐前铺地石的高度
-  const FOOD_TOP = FOOD_GROUND + foodTableAt.height + .045;
+  const FOOD_GROUND = .249 + .021 / 2;  // 食桌所在院地铺面，而非檐前台阶
+  const FOOD_TOP = FOOD_GROUND + foodTableAt.height + .07 / 2;
 
   function foodBall(mesh, x, y, z, r, color) {
     mesh.revolved(x, z, [[y - r, 0], [y - r * .5, r * .86], [y + r * .28, r * .74], [y + r, 0]], [color], 9);
@@ -3758,7 +3768,7 @@ document.getElementById("farmer-atlas").src = "data:image/webp;base64,UklGRpg7AA
       const points = [];
       for (const dx of [-top / 2, top / 2]) {
         for (const dz of [-deep / 2, deep / 2]) {
-          points.push(project(x + dx, g + height, z + dz), project(x + dx, g + height + .07, z + dz));
+          points.push(project(x + dx, g + height - .035, z + dz), project(x + dx, g + height + .035, z + dz));
         }
       }
       for (const [dx, dz] of [[-.38, -.23], [.38, -.23], [-.38, .23], [.38, .23]]) {
@@ -5499,8 +5509,9 @@ document.getElementById("farmer-atlas").src = "data:image/webp;base64,UklGRpg7AA
     const step = now => {
       const elapsed = Math.max(0, now - startAt);
       const t = Math.min(1, elapsed / duration);
-      // 非对称缓入缓出：提早显现旋转，字幕退场时仍有缓慢的落位运动。
-      const ease = 1 - (1 - t) ** 2.5 * (1 + 2.5 * t);
+      // 五次 S 曲线：首尾速度和加速度均为零，中段集中完成旋转。
+      // 保留整段 2310ms 时间轴，直到字幕退场结束才完全落位。
+      const ease = t * t * t * (10 + t * (-15 + 6 * t));
       applyDialAngle(startDeg + (endDeg - startDeg) * ease);
       if (t < 1) {
         dialRaf = requestAnimationFrame(step);
@@ -5515,8 +5526,9 @@ document.getElementById("farmer-atlas").src = "data:image/webp;base64,UklGRpg7AA
   applyDialAngle(dialAngle);
 
   // 字幕与节气盘共用切换时间轴：入场、场景重建后的观赏停留、同步退场。
-  const interludeTiming = { cover: 370, hold: 1380, enter: 600, exit: 560, reveal: 680 };
+  const interludeTiming = { cover: 370, hold: 1380, enter: 600, exit: 560, reveal: 680, easing: "cubic-bezier(.65,0,.35,1)" };
   interlude.style.setProperty("--interlude-exit", `${interludeTiming.exit}ms`);
+  interlude.style.setProperty("--interlude-ease", interludeTiming.easing);
   let pendingIndex = null;
   let settleTimer;
   let interludeTimer;
@@ -5580,7 +5592,7 @@ document.getElementById("farmer-atlas").src = "data:image/webp;base64,UklGRpg7AA
       textEntry?.cancel();
       textEntry = interludeText.animate(
         [{opacity:0,transform:"translateY(var(--travel))"},{opacity:1,transform:"translateY(0)"}],
-        {duration:interludeTiming.enter,easing:"cubic-bezier(.22,.8,.24,1)"}
+        {duration:interludeTiming.enter,easing:interludeTiming.easing}
       );
       const exitAt = interludeTiming.cover + interludeTiming.hold;
       animateDialTo(stops[index], exitAt + interludeTiming.exit);
