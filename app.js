@@ -887,6 +887,7 @@
   if (targetIndex < 0) targetIndex = 1;
   let dialAngle = -stops[targetIndex] * dialStep;
   let dialRaf = 0;
+  let dialFinishTimer;
 
   function applyDialAngle(deg) {
     dialAngle = deg;
@@ -911,14 +912,27 @@
       cancelAnimationFrame(dialRaf);
       dialRaf = 0;
     }
+    clearTimeout(dialFinishTimer);
+    dialFinishTimer = undefined;
   }
 
-  function animateDialTo(stopIndex, duration) {
+  function animateDialTo(stopIndex, duration, onComplete) {
     stopDialAnimation();
     const startDeg = dialAngle;
     const endDeg = shortestDialTarget(startDeg, stopIndex);
-    if (reduceMotion.matches || Math.abs(endDeg - startDeg) < .05 || typeof requestAnimationFrame !== "function") {
+    const finish = () => {
+      dialRaf = 0;
+      dialFinishTimer = undefined;
       applyDialAngle(endDeg);
+      onComplete?.();
+    };
+    if (reduceMotion.matches) {
+      finish();
+      return;
+    }
+    if (typeof requestAnimationFrame !== "function") {
+      applyDialAngle(endDeg);
+      dialFinishTimer = setTimeout(finish, duration);
       return;
     }
     const startAt = performance.now();
@@ -926,14 +940,13 @@
       const elapsed = Math.max(0, now - startAt);
       const t = Math.min(1, elapsed / duration);
       // 五次 S 曲线：首尾速度和加速度均为零，中段集中完成旋转。
-      // 保留整段 2050ms 时间轴，直到字幕退场结束才完全落位。
+      // 旋转独立落位，完成后再开始静止停顿和退场。
       const ease = t * t * t * (10 + t * (-15 + 6 * t));
       applyDialAngle(startDeg + (endDeg - startDeg) * ease);
       if (t < 1) {
         dialRaf = requestAnimationFrame(step);
       } else {
-        dialRaf = 0;
-        applyDialAngle(endDeg);
+        finish();
       }
     };
     dialRaf = requestAnimationFrame(step);
@@ -941,9 +954,10 @@
 
   applyDialAngle(dialAngle);
 
-  // 字幕与节气盘共用切换时间轴：入场、场景重建后的观赏停留、同步退场。
-  const interludeTiming = { cover: 370, hold: 1120, enter: 600, exit: 560, reveal: 680, easing: "cubic-bezier(.65,0,.35,1)" };
+  // 节气盘旋转落位 → 静止 200ms → 字幕、节气盘及幕布同步退场。
+  const interludeTiming = { cover: 370, turn: 2050, landed: 200, enter: 600, exit: 560, reveal: 680, easing: "cubic-bezier(.65,0,.35,1)" };
   interlude.style.setProperty("--interlude-exit", `${interludeTiming.exit}ms`);
+  interlude.style.setProperty("--dial-reveal", `${interludeTiming.turn - interludeTiming.cover - 110}ms`);
   interlude.style.setProperty("--interlude-ease", interludeTiming.easing);
   let pendingIndex = null;
   let settleTimer;
@@ -1010,9 +1024,10 @@
         [{opacity:0,transform:"translateY(var(--travel))"},{opacity:1,transform:"translateY(0)"}],
         {duration:interludeTiming.enter,easing:interludeTiming.easing}
       );
-      const exitAt = interludeTiming.cover + interludeTiming.hold;
-      animateDialTo(stops[index], exitAt + interludeTiming.exit);
-      interludeTimer = setTimeout(releaseInterlude, exitAt);
+      animateDialTo(stops[index], interludeTiming.turn, () => {
+        // 依据实际落位帧计时，而不是预估结束时刻；掉帧也不会吞掉停顿。
+        interludeTimer = setTimeout(releaseInterlude, interludeTiming.landed);
+      });
     }
     targetIndex = index;
     pendingIndex = index;

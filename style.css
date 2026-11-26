@@ -415,7 +415,7 @@ body.harvest-mode #yard { cursor:crosshair; }
   --wash:#101e21;
   --tint:#d9e4bb;
   --dial-gold:#ffdf9d;
-  --dial-reveal:1010ms;
+  --dial-reveal:1570ms;
   --interlude-fade:380ms;
   --interlude-exit:560ms;
   --interlude-ease:cubic-bezier(.65,0,.35,1);
