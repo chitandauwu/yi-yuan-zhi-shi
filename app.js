@@ -8,9 +8,8 @@
       hou: ["獭祭鱼", "鸿雁来", "草木萌动"],
       palette: [["柳绿","#7BC454"],["天青","#6EB8C4"],["杏红","#EE8478"]],
       paletteNote: "春属木 · 尚青绿",
-      summary: "春雨润泥，杏花初绽枝头；农夫沿田埂疏沟引水。",
-      note: "东风解冻，细雨如丝。枝头杏花初绽浅红，新柳吐绿；农夫趁着泥土松润，沿田埂疏沟引水、蓄水备墒，静待春耕。",
-      gnomonNote: "雨水时太阳直射点渐向北移，正午表影日短，江汉回暖润泽春耕。"
+      summary: "黄经 330° · 冻土化雨、杏花先叶，疏渠蓄墒备春耕。",
+      note: "《月令七十二候集解》载：「东风解冻，冰雪皆散而为水，化而为雨。」太阳运行至黄经 330°，江汉气温回升、降水由雪转雨，农人趁土壤解冻清沟理墒，筹备春播。"
     },
     grain: {
       longitude: 75, name: "芒种", month: "五月节",
@@ -18,9 +17,8 @@
       hou: ["螳螂生", "鵙始鸣", "反舌无声"],
       palette: [["竹青","#489A56"],["缥色","#52B8B5"],["麦黄","#EFC562"]],
       paletteNote: "夏属火 · 尚明翠",
-      summary: "碧水映天，新栽稻秧成行；竹匾晒新麦，蜻蜓点波。",
-      note: "「有芒之谷，此时可种」。浅水稻田映出天光云影，农夫抢时插下新秧；檐下竹匾摊晒麦粒，蜻蜓掠水，夏木葱茏。",
-      gnomonNote: "临近夏至，太阳直射点逼近北回归线，正午日高影短，光热充沛宜栽秧。"
+      summary: "黄经 75° · 夏麦归晒、浅水插秧，承前启后忙双抢。",
+      note: "「有芒之谷可稼种也。」太阳运行至黄经 75°，大麦、小麦等有芒夏熟作物急待收晒，中晚稻等有芒秋熟谷物抢墒移栽，是全年农事承前启后的关键节点。"
     },
     dew: {
       longitude: 195, name: "寒露", month: "九月节",
@@ -28,9 +26,8 @@
       hou: ["鸿雁来宾", "雀入大水为蛤", "菊有黄华"],
       palette: [["秋香","#C8A642"],["酡颜","#D65A44"],["黛蓝","#385A7C"]],
       paletteNote: "秋属金 · 尚丹金",
-      summary: "丹枫落院，黄菊盛放篱边；金稻满田，开闸放水待收。",
-      note: "露气渐寒，秋意已深。篱边黄菊盛放，丹枫轻落庭院；田间稻穗低垂金黄，农夫开闸排水晒田，静候开镰归仓。",
-      gnomonNote: "秋分已过，太阳直射点越过赤道南移，正午表影明显拉长，昼夜温差促稻熟。"
+      summary: "黄经 195° · 露寒欲凝、断水晒田，晚稻完熟待开镰。",
+      note: "「露气寒冷，将凝结也。」太阳运行至黄经 195°，夜间地面辐射降温加剧，露水寒重将凝为霜；江汉晚稻开闸断水晒田，赶在初霜前灌浆完熟。"
     },
     winter: {
       longitude: 240, name: "小雪", month: "十月中",
@@ -38,9 +35,8 @@
       hou: ["虹藏不见", "天气上升地气下降", "闭塞而成冬"],
       palette: [["霜色","#EDF5F8"],["月白","#BCD8E8"],["玄青","#2C4866"]],
       paletteNote: "冬属水 · 尚玄素",
-      summary: "初雪覆瓦，檐灯映暖青石；农夫围炉搓手，茶烟袅袅。",
-      note: "初冬飞雪轻覆青瓦，檐下灯火映出融融暖意。田埂积雪未厚，菜畦尚留青翠；农夫围炉烘手温茶，顺时藏冬。",
-      gnomonNote: "渐近冬至，太阳直射点逼近南回归线，正午日低影长，寒气日盛宜藏冬。"
+      summary: "黄经 240° · 初雪未盛、水田休耕，霜打冬菜转冬藏。",
+      note: "「气寒而将雪矣，地寒未甚而雪未大也。」太阳运行至黄经 240°，冷空气频频南下初降小雪，水田留茬养地，耐寒冬菜经霜增甜，农事正式转入冬藏。"
     }
   };
   const canvas = document.querySelector("#yard");
@@ -70,12 +66,13 @@
   const poleOutline = document.querySelector("#gnomon-outline");
   const poleOutlineEdge = document.querySelector("#gnomon-outline-edge");
   const poleMeasure = document.querySelector("#gnomon-measure");
+  const poleMeasureLabel = document.querySelector("#gnomon-measure-label");
   const poleTarget = document.querySelector("#gnomon-target");
   const poleInspection = document.querySelector("#gnomon-inspect");
+  const poleLongitude = document.querySelector("#gnomon-longitude");
   const poleReading = document.querySelector("#gnomon-length");
   const poleAltitude = document.querySelector("#gnomon-altitude");
   const poleDeclination = document.querySelector("#gnomon-declination");
-  const poleNote = document.querySelector("#gnomon-note");
   const poleReturn = document.querySelector("#gnomon-return");
   const gnomonTermButtons = Array.from(document.querySelectorAll("[data-gnomon-term]"));
   const gnomonToggle = document.querySelector("#toggle-gnomon");
@@ -361,12 +358,12 @@
     return path;
   }
 
-  // —— 门口食桌：悬停描边，点开看这一节气吃什么 ——
+  // —— 门口食桌：悬停描边，展示节令食材与物候成因 ——
   const FOOD = {
-    rain:   { name: "青团", note: "雨水滋润，田埂嫩艾初生。江汉人家采摘鲜艾捣汁，拌入糯米粉揉成青团上笼蒸熟，清香软糯，为春耕添一口春鲜。" },
-    grain:  { name: "粽子", note: "芒种紧邻端午，新麦初收、箬叶正肥。采清香箬叶裹紧糯米，文火煮上一锅热粽，是双抢农忙时最顶饿的一餐。" },
-    dew:    { name: "柿子", note: "寒露时节柿子透红。摘下枝头鲜果埋进米缸焐去涩味，待霜降前后启封，果肉软糯清甜，满口秋香。" },
-    winter: { name: "糍粑", note: "小雪渐寒，农闲打糍粑。糯米蒸熟入石臼捣至软韧，切块慢煎或炭火煨至两面微焦鼓泡，外酥内糯，暖胃御寒。" }
+    rain:   { name: "艾草青团", note: "雨水后田埂嫩艾萌发，采鲜叶焯水捣汁拌糯米粉蒸熟。艾草富含挥发油可温散春寒湿气，是顺应春生节律的时令食俗。" },
+    grain:  { name: "箬叶热粽", note: "芒种与端午相连，新麦初收、箬叶清香宽韧。以箬叶紧裹糯米慢煮，耐贮且热量充沛，恰为「双抢」重体力农忙补充能量。" },
+    dew:    { name: "米缸焐柿", note: "寒露柿果红熟，生柿因含可溶性单宁而味涩；埋入米缸借谷物呼吸释放乙烯加速脱涩软化，霜降前启封即清甜无涩。" },
+    winter: { name: "手工糍粑", note: "晚稻归仓后取新糯米蒸熟，入石臼趁热舂捣成韧团。质地致密耐贮，炭火慢煨后外焦内糯，为江汉冬日御寒主食。" }
   };
   const foodLayer = document.querySelector("#food-hotspots");
   const foodOutline = document.querySelector("#food-outline");
@@ -377,12 +374,12 @@
   const foodName = document.querySelector("#food-name");
   const foodNote = document.querySelector("#food-note");
 
-  // —— 田里的庄稼：整片合一描边 → 拉近 → 文字 ——
+  // —— 田里的庄稼：整片合一描边 → 拉近 → 物候与农理 ——
   const CROP = {
-    rain:   { title: "杏花春雨", name: "杏花先叶", note: "初春杏花先叶而绽，粉白花瓣轻落空田。江汉农人常以花期候农时：待杏花渐谢，便着手疏渠、夯埂、整地备秧，待清明后再下种插苗。" },
-    grain:  { title: "芒种秧畦", name: "手插新秧", note: "这片秧畦是芒种前后手工栽下的中稻，行距一尺二、株距六寸，三五株并作一蔸。田间留一寸浅水护苗，栽后略晾一日，好让新根稳稳扎进泥里。" },
-    dew:    { title: "寒露稻穗", name: "穗重低垂", note: "寒露时节稻穗饱满沉重，压弯了稻秆，谷粒由青转黄、指捏坚实。此时断水晒田十日，抢在初霜降临前开镰收割，好让晚稻颗粒归仓。" },
-    winter: { title: "雪里菜畦", name: "雪压冬菜", note: "冬日水田只余稻桩，唯独田畔这条菜畦依旧葱绿。青菜与油菜苗经霜雪一打，叶片愈发厚实清甜；待开春翻耕时，余苗还可连土翻入田中作底肥。" }
+    rain:   { title: "杏花候时", name: "先花后叶", note: "杏树对初春积温回升极为敏感，花朵先于叶片开放。传统农事以杏花盛谢作为地温稳定回暖的物候信标，据此安排整地育秧。" },
+    grain:  { title: "芒种秧畦", name: "浅水护秧", note: "中稻移栽采用宽行窄株以利采光通风，三五苗并作一蔸。田面留一寸浅水可昼吸热、夜保温，促使秧苗快速返青扎根。" },
+    dew:    { title: "寒露晚稻", name: "断水促熟", note: "晚稻进入完熟期须提前开闸断水晒田，降低土壤湿度以防贪青倒伏，并借寒露拉大的昼夜温差加速谷粒淀粉灌浆。" },
+    winter: { title: "霜打冬菜", name: "抗寒增甜", note: "水田留稻桩冬闲养地，田畔青菜与油菜苗在霜雪低温下将体内部分淀粉水解为葡萄糖以防冻害，故霜后冬菜格外清甜。" }
   };
   const cropLayer = document.querySelector("#crop-hotspots");
   const cropOutlines = document.querySelector("#crop-outlines");
@@ -458,6 +455,12 @@
     const tx=-dy/length*4, ty=dx/length*4;
     poleMeasure.setAttribute("d",
       `M${ax},${ay}L${bx},${by}M${ax-tx},${ay-ty}L${ax+tx},${ay+ty}M${bx-tx},${by-ty}L${bx+tx},${by+ty}`);
+    if (poleMeasureLabel) {
+      const mx = (ax + bx) * .5 + tx * 2.8;
+      const my = (ay + by) * .5 + ty * 2.8 - 4;
+      poleMeasureLabel.setAttribute("x", mx.toFixed(1));
+      poleMeasureLabel.setAttribute("y", my.toFixed(1));
+    }
     const xs=outline.map(([x])=>x), ys=outline.map(([,y])=>y);
     const left=Math.min(...xs), top=Math.min(...ys);
     Object.assign(poleTarget.style,{
@@ -804,11 +807,12 @@
     const declDeg = declination / degrees;
     const declText = (declDeg >= 0 ? "北纬 " : "南纬 ") + Math.abs(declDeg).toFixed(1) + "°";
     shadowReadout.textContent = ratio + "× 竿高";
-    shadowLatitude.textContent = "北纬 30.4° · 仰角 " + altDeg + "°";
-    poleReading.textContent = ratio + " × 竿高";
+    shadowLatitude.textContent = "仰角 " + altDeg + "° · 点击实测";
+    if (poleLongitude) poleLongitude.textContent = term.longitude + "°";
+    poleReading.textContent = ratio + "× 竿高";
     poleAltitude.textContent = altDeg + "°";
     if (poleDeclination) poleDeclination.textContent = declText;
-    poleNote.textContent = term.gnomonNote;
+    if (poleMeasureLabel) poleMeasureLabel.textContent = term.name + "表影 " + ratio + "×竿高";
     for (const button of gnomonTermButtons) {
       if (button.dataset.gnomonTerm === key) button.setAttribute("aria-current", "true");
       else button.removeAttribute("aria-current");
@@ -857,6 +861,17 @@
     exitAllModes({ releaseCamera: true });
     soundscape?.playSfx("panel");
     guide.showModal();
+  });
+  sundial?.addEventListener("click", () => {
+    if (guide.open) guide.close();
+    openPoleInspection();
+  });
+  sundial?.addEventListener("keydown", event => {
+    if (event.key === "Enter" || event.key === " ") {
+      event.preventDefault();
+      if (guide.open) guide.close();
+      openPoleInspection();
+    }
   });
   guide.addEventListener("click",event => {
     if (event.target !== guide || clickedInside(guide,event)) return;

@@ -12,7 +12,7 @@
   <main class="exhibit">
     <aside class="side-panel" aria-label="节气导览">
       <header class="mast">
-        <h1 id="work-title">一院知时</h1>
+        <h1 id="work-title"><img src="assets/yard-title.webp" width="960" height="275" alt="一院知时" draggable="false"></h1>
       </header>
       <nav class="calendar" aria-labelledby="ruler-heading">
         <div class="ruler-heading">
@@ -136,12 +136,13 @@
         <polygon id="gnomon-outline-edge"/>
         <polygon id="gnomon-outline"/>
         <path id="gnomon-measure"/>
+        <text id="gnomon-measure-label" class="gnomon-measure-label"></text>
       </svg>
-      <button id="gnomon-target" type="button" aria-label="观察立杆与正午日影" aria-controls="gnomon-inspect" aria-expanded="false" hidden></button>
-      <button id="fire-target" type="button" aria-label="看看火塘" aria-controls="fire-inspect" aria-expanded="false" hidden></button>
-      <button id="sickle-target" type="button" aria-label="看看门边那把镰刀" aria-controls="sickle-inspect" aria-expanded="false" hidden></button>
-      <button id="food-target" type="button" aria-label="看看这张桌上的时令吃食" aria-controls="food-inspect" aria-expanded="false" hidden></button>
-      <button id="crop-target" type="button" aria-label="看看田里的庄稼" aria-controls="crop-inspect" aria-expanded="false" hidden></button>
+      <button id="gnomon-target" type="button" aria-label="立竿测影：查看节气测定由来与正午表影" aria-controls="gnomon-inspect" aria-expanded="false" hidden></button>
+      <button id="fire-target" type="button" aria-label="围炉煨糍" aria-controls="fire-inspect" aria-expanded="false" hidden></button>
+      <button id="sickle-target" type="button" aria-label="开镰割稻" aria-controls="sickle-inspect" aria-expanded="false" hidden></button>
+      <button id="food-target" type="button" aria-label="案上时令饮食" aria-controls="food-inspect" aria-expanded="false" hidden></button>
+      <button id="crop-target" type="button" aria-label="田间物候农事" aria-controls="crop-inspect" aria-expanded="false" hidden></button>
       <div id="harvest-bar" class="harvest-bar" role="status" aria-live="polite" hidden>
         <span id="harvest-status">开镰收割 · 点击稻田成片收割</span>
         <button id="harvest-exit" type="button">退出收割</button>
@@ -150,25 +151,28 @@
     </section>
     <section id="gnomon-inspect" class="gnomon-inspect" aria-labelledby="gnomon-heading" hidden>
       <header>
-        <h2 id="gnomon-heading">立杆测影</h2>
+        <h2 id="gnomon-heading">
+          <span>立竿测影</span>
+          <em class="gnomon-origin-tag">二十四节气测定之源</em>
+        </h2>
         <button id="gnomon-return" type="button" aria-label="退出观察" title="退出观察">
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18"/></svg>
         </button>
       </header>
+      <p class="gnomon-principle">立竿为「表」，卧尺为「圭」。先秦实测正午表影：<strong>影最短定夏至、最长定冬至</strong>，由此确立春分、秋分，再沿黄道每 <strong>15°</strong> 等分定出二十四节气。</p>
       <div class="gnomon-metrics">
-        <p class="gnomon-metric"><span>正午影长</span><output id="gnomon-length"></output></p>
-        <p class="gnomon-metric"><span>太阳仰角</span><output id="gnomon-altitude"></output></p>
-        <p class="gnomon-metric"><span>太阳直射</span><output id="gnomon-declination"></output></p>
+        <p class="gnomon-metric"><span>太阳黄经</span><output id="gnomon-longitude"></output></p>
+        <p class="gnomon-metric"><span>直射纬度</span><output id="gnomon-declination"></output></p>
+        <p class="gnomon-metric"><span>正午仰角</span><output id="gnomon-altitude"></output></p>
+        <p class="gnomon-metric"><span>正午表影</span><output id="gnomon-length"></output></p>
       </div>
-      <p class="gnomon-principle">直立测影之竿称「表」，卧地刻尺称「圭」。于北纬 30.4° 正午测影，太阳直射点越偏北，太阳仰角越高，表影便越短。</p>
-      <div class="gnomon-compare" role="group" aria-label="四季正午影长对比">
-        <button type="button" data-gnomon-term="grain"><span class="gc-name">芒种</span><span class="gc-track"><i class="gc-bar" style="--ratio:10%"></i></span><span class="gc-val">0.14×</span></button>
-        <button type="button" data-gnomon-term="dew"><span class="gc-name">寒露</span><span class="gc-track"><i class="gc-bar" style="--ratio:53%"></i></span><span class="gc-val">0.73×</span></button>
-        <button type="button" data-gnomon-term="rain"><span class="gc-name">雨水</span><span class="gc-track"><i class="gc-bar" style="--ratio:66%"></i></span><span class="gc-val">0.90×</span></button>
-        <button type="button" data-gnomon-term="winter"><span class="gc-name">小雪</span><span class="gc-track"><i class="gc-bar" style="--ratio:89%"></i></span><span class="gc-val">1.22×</span></button>
-        <p class="gnomon-extremes"><span>夏至最短 0.12×</span><span>点击节气实时对比日影</span><span>冬至最长 1.37×</span></p>
+      <div class="gnomon-compare" role="group" aria-label="四时节气正午表影实测对比">
+        <button type="button" data-gnomon-term="grain"><span class="gc-name">芒种 <i>75°</i></span><span class="gc-track"><i class="gc-bar" style="--ratio:10%"></i></span><span class="gc-val">0.14×</span></button>
+        <button type="button" data-gnomon-term="dew"><span class="gc-name">寒露 <i>195°</i></span><span class="gc-track"><i class="gc-bar" style="--ratio:53%"></i></span><span class="gc-val">0.73×</span></button>
+        <button type="button" data-gnomon-term="rain"><span class="gc-name">雨水 <i>330°</i></span><span class="gc-track"><i class="gc-bar" style="--ratio:66%"></i></span><span class="gc-val">0.90×</span></button>
+        <button type="button" data-gnomon-term="winter"><span class="gc-name">小雪 <i>240°</i></span><span class="gc-track"><i class="gc-bar" style="--ratio:89%"></i></span><span class="gc-val">1.22×</span></button>
+        <p class="gnomon-extremes"><span>夏至极短 0.12×（90°）</span><span>点击切换实测表影</span><span>冬至极长 1.37×（270°）</span></p>
       </div>
-      <p id="gnomon-note">同一座小院，日头升得越高，表影缩得越短；一年里最长与最短的正午日影，皆映在这根立杆之上。</p>
     </section>
     <section id="fire-inspect" class="gnomon-inspect food-inspect" aria-labelledby="fire-heading" hidden>
       <header>
@@ -177,9 +181,9 @@
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18"/></svg>
         </button>
       </header>
-      <p class="food-kicker">小雪 · 围炉</p>
-      <p class="food-name">一炉炭火</p>
-      <p id="fire-note">木柴燃作透红炭火，炉边暖意融融。将糍粑搁在炙热灶石上慢煨，待表皮渐渐鼓起焦裂，掰开蘸上红糖，便是一冬最暖心的滋味。</p>
+      <p class="food-kicker">小雪 · 冬藏民俗</p>
+      <p class="food-name">炭盆慢煨</p>
+      <p id="fire-note">冬闲户外阴寒，江汉农家常设炭盆取暖议农。将糯米糍粑置炙热灶石慢烘，内部水汽受热膨胀令表皮微焦鼓泡，耐饥御寒。</p>
       <button id="roast-start" type="button">搁一块糍粑</button>
     </section>
     <section id="sickle-inspect" class="gnomon-inspect food-inspect" aria-labelledby="sickle-heading" hidden>
@@ -189,9 +193,9 @@
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18"/></svg>
         </button>
       </header>
-      <p class="food-kicker">寒露 · 开镰</p>
-      <p class="food-name">檐下弯镰</p>
-      <p id="sickle-note">金黄稻穗压弯稻秆，谷粒饱满坚实，田间早已断水晒干，只待开镰。晚稻须在初霜前抢收归仓，方不负一季辛劳。</p>
+      <p class="food-kicker">寒露 · 秋收农事</p>
+      <p class="food-name">抢晴开镰</p>
+      <p id="sickle-note">晚稻谷粒硬化黄熟，田土已提前断水晒干。寒露至霜降间须抢晴收割归仓，以免秋霖初霜导致倒伏落粒。</p>
       <button id="harvest-start" class="harvest-start" type="button">下田开镰</button>
     </section>
     <section id="crop-inspect" class="gnomon-inspect food-inspect" aria-labelledby="crop-heading" hidden>
@@ -252,9 +256,12 @@
         </button>
       </div>
     </aside>
-    <aside class="hud-dock" aria-label="立杆测影和节气小志">
-      <button id="toggle-gnomon" class="gnomon-dock-toggle" type="button" aria-label="观察立杆测影" aria-pressed="false" title="立杆测影">
-        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 5v13M4 18h16M9 18h9"/><circle cx="16.5" cy="7.5" r="2.2"/></svg>
+    <aside class="hud-dock" aria-label="立竿测影和节气小志">
+      <button id="toggle-gnomon" class="gnomon-dock-toggle" type="button" aria-label="立竿测影：节气测定之源" aria-pressed="false" title="立竿测影 · 节气测定之源">
+        <span class="gnomon-dock-icon">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 5v13M4 18h16M9 18h9"/><circle cx="16.5" cy="7.5" r="2.2"/></svg>
+        </span>
+        <span class="gnomon-dock-label">立竿测影</span>
       </button>
       <button id="open-guide" class="guide-toggle" type="button" aria-haspopup="dialog" aria-controls="season-guide">
         <svg viewBox="0 0 80 80" aria-hidden="true">
@@ -293,8 +300,8 @@
           </ul>
           <small id="palette-caption" class="palette-caption"></small>
         </section>
-        <figure class="sundial" id="sundial">
-          <figcaption>田头正午日影</figcaption>
+        <figure class="sundial" id="sundial" role="button" tabindex="0" title="点击前往田头立竿实测正午表影">
+          <figcaption>圭表定气 · 实测表影</figcaption>
           <svg class="sun-diagram" viewBox="-15 10 95 55" aria-hidden="true">
             <path d="M-12 62H79" class="dial-axis"/>
             <rect x="32" y="60" height="2" class="shadow"/>
@@ -303,7 +310,7 @@
             <circle cx="4" cy="4" r="3.5" class="sun"/>
           </svg>
           <span id="shadow-ratio" aria-hidden="true"></span>
-          <small id="shadow-latitude" class="shadow-latitude">北纬 30.4° 示意</small>
+          <small id="shadow-latitude" class="shadow-latitude">北纬 30.4° · 点击实测</small>
         </figure>
       </div>
     </dialog>
