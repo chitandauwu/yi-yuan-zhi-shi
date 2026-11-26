@@ -913,7 +913,7 @@
     }
   }
 
-  function animateDialTo(stopIndex, duration = 760) {
+  function animateDialTo(stopIndex, duration) {
     stopDialAnimation();
     const startDeg = dialAngle;
     const endDeg = shortestDialTarget(startDeg, stopIndex);
@@ -921,13 +921,12 @@
       applyDialAngle(endDeg);
       return;
     }
-    let startAt = null;
+    const startAt = performance.now();
     const step = now => {
-      if (startAt === null) startAt = now;
       const elapsed = Math.max(0, now - startAt);
       const t = Math.min(1, elapsed / duration);
-      // 五次 S 型缓入缓出：启动轻盈加速，落位绵长停稳，起停均有完整过渡
-      const ease = t * t * t * (t * (t * 6 - 15) + 10);
+      // 非对称缓入缓出：提早显现旋转，字幕退场时仍有缓慢的落位运动。
+      const ease = 1 - (1 - t) ** 2.5 * (1 + 2.5 * t);
       applyDialAngle(startDeg + (endDeg - startDeg) * ease);
       if (t < 1) {
         dialRaf = requestAnimationFrame(step);
@@ -941,23 +940,18 @@
 
   applyDialAngle(dialAngle);
 
+  // 字幕与节气盘共用切换时间轴：入场、场景重建后的观赏停留、同步退场。
+  const interludeTiming = { cover: 370, hold: 1380, enter: 600, exit: 560, reveal: 680 };
+  interlude.style.setProperty("--interlude-exit", `${interludeTiming.exit}ms`);
   let pendingIndex = null;
   let settleTimer;
   let interludeTimer;
-  let dialLaunchRaf = 0;
   let textEntry;
-
-  function cancelDialLaunch() {
-    if (dialLaunchRaf) {
-      cancelAnimationFrame(dialLaunchRaf);
-      dialLaunchRaf = 0;
-    }
-  }
 
   function revealYard() {
     clearTimeout(interludeTimer);
-    cancelDialLaunch();
     stopDialAnimation();
+    applyDialAngle(shortestDialTarget(dialAngle, stops[targetIndex]));
     textEntry?.cancel();
     interlude.dataset.phase = "";
   }
@@ -965,7 +959,7 @@
   function releaseInterlude() {
     clearTimeout(interludeTimer);
     interlude.dataset.phase = "exit";
-    interludeTimer = setTimeout(revealYard, 680);
+    interludeTimer = setTimeout(revealYard, interludeTiming.reveal);
   }
 
   function settleRuler() {
@@ -975,31 +969,13 @@
     const key = button.dataset.season;
     pendingIndex = null;
     clearTimeout(settleTimer);
-    if (document.body.dataset.season === key) {
-      if (interlude.dataset.phase) releaseInterlude();
-      else revealYard();
-      return;
-    }
-    showTerm(key);
+    if (document.body.dataset.season !== key) showTerm(key);
     if (reduceMotion.matches || !scene) {
-      applyDialAngle(shortestDialTarget(dialAngle, stops[index]));
       revealYard();
       return;
     }
+    // 幕布淡入完成后才重建场景，但不打断已经开始的节气盘旋转。
     interlude.dataset.phase = "verse";
-    cancelDialLaunch();
-    // 等 showTerm 重建三维场景与阴影图后，跨越两个帧再起转星盘，保证首帧无阻塞、起停全程丝滑
-    if (typeof requestAnimationFrame === "function") {
-      dialLaunchRaf = requestAnimationFrame(() => {
-        dialLaunchRaf = requestAnimationFrame(() => {
-          dialLaunchRaf = 0;
-          if (interlude.dataset.phase === "verse") animateDialTo(stops[index], 760);
-        });
-      });
-    } else {
-      applyDialAngle(shortestDialTarget(dialAngle, stops[index]));
-    }
-    interludeTimer = setTimeout(releaseInterlude, 1380);
   }
 
   function selectTerm(index) {
@@ -1009,7 +985,10 @@
     soundscape?.playSfx("season", buttons[index].dataset.season);
     const button = buttons[index];
     const key = button.dataset.season;
-    if (!reduceMotion.matches && scene && (key !== document.body.dataset.season || interlude.dataset.phase === "cover")) {
+    clearTimeout(settleTimer);
+    clearTimeout(interludeTimer);
+    stopDialAnimation();
+    if (!reduceMotion.matches && scene) {
       const tick = button.getBoundingClientRect();
       const cursor = rulerCursor.getBoundingClientRect();
       // Sample the moving ruler before changing its destination.
@@ -1024,23 +1003,21 @@
       interlude.dataset.term = key;
       interlude.dataset.direction = forward ? "forward" : "backward";
       interlude.dataset.phase = "cover";
-      const travelPx = (forward ? 1 : -1) * Math.round(Math.max(36, Math.min(60, (window.innerHeight || 800) * .065)));
       textEntry?.cancel();
       textEntry = interludeText.animate(
-        [{opacity:0,transform:`translateY(${travelPx}px)`},{opacity:1,transform:"translateY(0)"}],
-        {duration:540,easing:"cubic-bezier(.22,.8,.24,1)"}
+        [{opacity:0,transform:"translateY(var(--travel))"},{opacity:1,transform:"translateY(0)"}],
+        {duration:interludeTiming.enter,easing:"cubic-bezier(.22,.8,.24,1)"}
       );
+      const exitAt = interludeTiming.cover + interludeTiming.hold;
+      animateDialTo(stops[index], exitAt + interludeTiming.exit);
+      interludeTimer = setTimeout(releaseInterlude, exitAt);
     }
     targetIndex = index;
     pendingIndex = index;
-    clearTimeout(settleTimer);
-    clearTimeout(interludeTimer);
-    cancelDialLaunch();
-    stopDialAnimation();
     ruler.style.setProperty("--ruler-index",stops[index]);
     if (reduceMotion.matches) settleRuler();
     // 等转场幕布完整淡入遮盖画面（360ms）后再触发场景重建，彻底消除入场卡顿
-    else settleTimer = setTimeout(settleRuler, 370);
+    else settleTimer = setTimeout(settleRuler, interludeTiming.cover);
   }
 
   // 在立杆测影科普面板内点击四季对比项：原地实时切换日影长度，不退出观察视角
