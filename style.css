@@ -94,17 +94,27 @@ button:focus-visible, canvas:focus-visible { outline:2px solid currentColor; out
 .hud-dock button, .stage-tools button, .guide-close { padding:0; border:0; background:transparent; }
 .hud-dock button:hover, .stage-tools button:hover, .guide-close:hover { color:var(--hud-gold); }
 .gnomon-dock-toggle {
+  display:grid; justify-items:center; align-items:center; gap:5px;
+  border:0; background:transparent; text-align:center;
+  transition:color .2s ease;
+}
+.gnomon-dock-icon {
   display:grid; place-items:center;
   width:clamp(49px,3.6vw,64px); height:clamp(49px,3.6vw,64px);
-  border:1px solid var(--hud-line) !important; border-radius:50%; background:#142b2b36 !important;
+  border:1px solid var(--hud-line); border-radius:50%; background:#142b2b36;
   transition:color .2s ease,border-color .2s ease,background-color .2s ease;
 }
 .gnomon-dock-toggle svg {
-  width:clamp(27px,1.95vw,35px); height:auto; fill:none; stroke:currentColor; stroke-width:1.65;
+  display:block; width:clamp(27px,1.95vw,35px); height:auto; fill:none; stroke:currentColor; stroke-width:1.65;
   stroke-linecap:round; stroke-linejoin:round; filter:drop-shadow(1px 1px 1px #13252793);
 }
-.gnomon-dock-toggle[aria-pressed="true"] {
-  color:var(--hud-gold); border-color:var(--hud-gold) !important; background:#172f3188 !important;
+.gnomon-dock-label {
+  font:500 clamp(15px,1.02vw,19px)/1.15 var(--display); letter-spacing:.06em; white-space:nowrap;
+}
+.gnomon-dock-toggle:hover .gnomon-dock-icon { border-color:var(--hud-gold); }
+.gnomon-dock-toggle[aria-pressed="true"] { color:var(--hud-gold); }
+.gnomon-dock-toggle[aria-pressed="true"] .gnomon-dock-icon {
+  color:var(--hud-gold); border-color:var(--hud-gold); background:#172f3188;
 }
 .hud-toggle[aria-pressed="true"] .hud-eye-slash { display:none; }
 .exhibit.hud-hidden .hud-toggle {
@@ -116,7 +126,8 @@ button:focus-visible, canvas:focus-visible { outline:2px solid currentColor; out
   align-items:start; row-gap:clamp(22px,5vh,50px);
   pointer-events:none; color:var(--hud-ink); text-shadow:var(--hud-shadow);
 }
-.mast h1 { margin:0; font:500 clamp(40px,3.35vw,65px)/1.12 var(--display); letter-spacing:.07em; white-space:nowrap; }
+.mast h1 { margin:0; width:min(100%,280px); }
+.mast img { display:block; width:100%; height:auto; filter:drop-shadow(1px 2px 3px #0f222673); }
 .calendar { width:100%; }
 .ruler-heading {
   display:flex; align-items:baseline; justify-content:space-between; gap:8px;
@@ -248,7 +259,13 @@ button:focus-visible, canvas:focus-visible { outline:2px solid currentColor; out
 .swatches li { display:grid; justify-items:start; gap:5px; font-size:14px; line-height:1.4; white-space:nowrap; }
 .swatches i { width:2.1em; height:1.05em; background:var(--swatch); border:1px solid #fff6e066; box-shadow:0 1px 4px #07121455; }
 .palette-caption { display:block; margin-top:9px; font-size:12.5px; letter-spacing:.08em; color:var(--hud-muted); }
-.sundial { margin:0; padding-left:13px; border-left:1px solid var(--hud-line); display:grid; justify-items:start; }
+.sundial {
+  margin:0; padding:6px 8px 6px 13px; border-left:1px solid var(--hud-line); border-radius:0 6px 6px 0;
+  display:grid; justify-items:start; cursor:pointer;
+  transition:background-color .18s ease;
+}
+.sundial:hover, .sundial:focus-visible { background:#ffd68a14; outline:none; }
+.sundial:hover .shadow-latitude { color:var(--hud-gold); }
 .sun-diagram { display:block; width:100px; height:54px; }
 #shadow-ratio { color:var(--hud-gold); font-size:15px; line-height:1.4; font-variant-numeric:lining-nums tabular-nums; }
 .shadow-latitude { margin-top:4px; color:var(--hud-muted); font-size:12px; white-space:nowrap; }
@@ -293,47 +310,63 @@ body.harvest-mode #yard { cursor:crosshair; }
   display:none; stroke:#ffda8d; stroke-width:2; stroke-linecap:round;
   fill:none; filter:drop-shadow(0 1px 2px #1b2928);
 }
-.exhibit.gnomon-focused #gnomon-measure { display:block; }
+.gnomon-measure-label {
+  display:none; fill:#ffe8af; font:500 13px var(--body-font); letter-spacing:.06em;
+  text-anchor:middle; paint-order:stroke; stroke:#142426e6; stroke-width:3.5px; stroke-linejoin:round;
+}
+.exhibit.gnomon-focused #gnomon-measure,
+.exhibit.gnomon-focused .gnomon-measure-label { display:block; }
 
-/* ---------- 立杆测影科普面板 ---------- */
+/* ---------- 立竿测影科普面板 ---------- */
 .gnomon-inspect {
   position:absolute; z-index:3; left:50%; bottom:var(--hud-bottom); transform:translateX(-50%);
-  width:min(486px,calc(100% - 2 * var(--hud-edge))); padding:14px 19px 16px;
+  width:min(516px,calc(100% - 2 * var(--hud-edge))); padding:14px 19px 16px;
   color:var(--hud-ink); background:#16292cf2; border:1px solid #d4b982a6;
   box-shadow:0 10px 32px #09191a52;
 }
-.gnomon-inspect header { display:flex; align-items:center; justify-content:space-between; }
-.gnomon-inspect h2 { margin:0; font:500 21px/1.2 var(--display); letter-spacing:.1em; }
+.gnomon-inspect header { display:flex; align-items:center; justify-content:space-between; gap:10px; }
+.gnomon-inspect h2 {
+  margin:0; display:flex; align-items:center; flex-wrap:wrap; gap:10px;
+  font:500 22px/1.2 var(--display); letter-spacing:.1em;
+}
+.gnomon-origin-tag {
+  display:inline-flex; align-items:center; padding:4px 10px;
+  border:1px solid #ffdf9db8; border-radius:999px;
+  background:linear-gradient(90deg,#ffd68a2b,#ffdf9d14);
+  color:#ffe4a3; font:500 12.5px/1.2 var(--display); font-style:normal;
+  letter-spacing:.12em; box-shadow:0 0 12px #ffd68a24;
+}
 .gnomon-inspect header button {
-  display:grid; place-items:center; width:36px; height:36px; margin:-5px -8px 0 0;
+  display:grid; place-items:center; width:36px; height:36px; margin:-4px -8px 0 0;
   border:0; padding:0; background:transparent;
 }
 .gnomon-inspect header button:hover { color:var(--hud-gold); }
 .gnomon-inspect header button svg {
   width:24px; height:24px; fill:none; stroke:currentColor; stroke-width:1.7; stroke-linecap:round;
 }
-.gnomon-inspect p { margin:8px 0 0; }
+.gnomon-inspect p { margin:9px 0 0; }
+.gnomon-principle {
+  font-size:13.2px; line-height:1.68; color:var(--hud-ink);
+  padding:7px 10px; background:#0f1f2278; border-left:2px solid var(--hud-gold);
+}
+.gnomon-principle strong { color:var(--hud-gold); font-weight:500; }
 .gnomon-metrics {
-  display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:10px;
-  margin-top:10px; padding:9px 11px;
+  display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:8px;
+  margin-top:9px; padding:8px 10px;
   background:#0f1f2299; border:1px solid #d4b98245;
 }
 .gnomon-metric { margin:0 !important; display:grid; gap:2px; min-width:0; }
-.gnomon-metric span { font-size:12px; letter-spacing:.08em; color:var(--hud-muted); opacity:.86; }
+.gnomon-metric span { font-size:11.5px; letter-spacing:.06em; color:var(--hud-muted); opacity:.86; white-space:nowrap; }
 .gnomon-metric output {
-  font:500 18px/1.25 var(--body-font); color:var(--hud-gold);
+  font:500 16.5px/1.25 var(--body-font); color:var(--hud-gold);
   font-variant-numeric:lining-nums tabular-nums; white-space:nowrap;
 }
-.gnomon-principle {
-  font-size:13px; line-height:1.65; color:var(--hud-muted);
-  padding-left:10px; border-left:2px solid #d4b98280;
-}
 .gnomon-compare {
-  display:grid; gap:4px; margin-top:10px; padding-top:9px;
+  display:grid; gap:4px; margin-top:9px; padding-top:8px;
   border-top:1px solid var(--hud-line);
 }
 .gnomon-compare button {
-  display:grid; grid-template-columns:40px 1fr 48px; align-items:center; gap:9px;
+  display:grid; grid-template-columns:72px 1fr 46px; align-items:center; gap:9px;
   width:100%; padding:4px 7px; border:1px solid transparent; border-radius:4px;
   background:transparent; text-align:left; font-size:13px; line-height:1.3;
   transition:background-color .18s ease, border-color .18s ease, color .18s ease;
@@ -342,7 +375,9 @@ body.harvest-mode #yard { cursor:crosshair; }
 .gnomon-compare button[aria-current="true"] {
   background:#ffd68a1c; border-color:#ffd68a66; color:var(--hud-gold);
 }
-.gc-name { letter-spacing:.08em; white-space:nowrap; }
+.gc-name { letter-spacing:.05em; white-space:nowrap; }
+.gc-name i { font-style:normal; font-size:11.5px; color:var(--hud-muted); opacity:.8; margin-left:2px; font-variant-numeric:lining-nums tabular-nums; }
+.gnomon-compare button[aria-current="true"] .gc-name i { color:var(--hud-gold); opacity:.92; }
 .gc-track {
   display:block; height:6px; border-radius:999px;
   background:#ffffff1a; overflow:hidden;
@@ -365,7 +400,6 @@ body.harvest-mode #yard { cursor:crosshair; }
   font-size:11.5px; letter-spacing:.04em; color:var(--hud-muted); opacity:.82;
   font-variant-numeric:lining-nums tabular-nums;
 }
-#gnomon-note { font-size:13.5px; line-height:1.65; color:#efe7d5e8; }
 
 .season-interlude {
   --wash:#101e21;
@@ -529,12 +563,13 @@ body.harvest-mode #yard { cursor:crosshair; }
   :root { --hud-top:14px; --hud-bottom:14px; --ruler-step:20px; }
   .stage { min-height:max(515px,100svh); }
   .side-panel { row-gap:9px; }
-  .mast h1 { font-size:36px; }
+  .mast h1 { width:min(100%,166px); }
   .term[aria-current="true"] .term-name { font-size:23px; }
   .yard-links button { min-height:45px; font-size:14px; }
   .yard-links svg { width:22px; }
-  .gnomon-dock-toggle { width:42px; height:42px; }
+  .gnomon-dock-icon { width:42px; height:42px; }
   .gnomon-dock-toggle svg { width:24px; }
+  .gnomon-dock-label { font-size:14px; }
   .guide-toggle { font-size:17px; }
   .guide-toggle svg { width:49px; }
 }
@@ -545,7 +580,7 @@ body.harvest-mode #yard { cursor:crosshair; }
     background:linear-gradient(180deg,#132527e8 0%,#13252798 25%,transparent 49%,transparent 68%,#132527e8 100%);
   }
   .side-panel { width:calc(100% - 2 * var(--hud-edge)); bottom:calc(var(--hud-bottom) + 53px); row-gap:14px; }
-  .mast h1 { font-size:35px; }
+  .mast h1 { width:min(100%,158px); }
   .calendar { width:min(100%,335px); }
   .ruler-heading { padding-bottom:5px; margin-bottom:3px; }
   .ruler-heading h2 { font-size:17px; }
@@ -558,13 +593,15 @@ body.harvest-mode #yard { cursor:crosshair; }
   .season-note::before { top:17px; }
   #yard, #yard-compatibility, #yard-shadow, #yard-hotspots, #food-hotspots, #crop-hotspots, #sickle-hotspots, #fire-hotspots { inset:240px 0 90px; height:calc(100% - 330px); }
   .gnomon-inspect { bottom:calc(var(--hud-bottom) + 53px); padding:12px 14px 14px; }
-  .gnomon-metrics { gap:6px; padding:7px 8px; }
-  .gnomon-metric output { font-size:15.5px; }
+  .gnomon-metrics { grid-template-columns:repeat(2,minmax(0,1fr)); gap:6px 10px; padding:7px 9px; }
+  .gnomon-metric output { font-size:15px; }
   .gnomon-extremes { font-size:11px; }
   .harvest-bar { top:14px; gap:8px; padding:6px 8px 6px 12px; max-width:calc(100% - 24px); }
-  .hud-dock { width:auto; min-width:0; grid-auto-flow:column; align-items:center; justify-items:center; gap:8px; }
-  .gnomon-dock-toggle { width:36px; height:36px; }
-  .gnomon-dock-toggle svg { width:21px; }
+  .hud-dock { width:auto; min-width:0; grid-auto-flow:column; align-items:center; justify-items:center; gap:10px; }
+  .gnomon-dock-toggle { display:flex; align-items:center; gap:5px; min-height:44px; }
+  .gnomon-dock-icon { width:34px; height:34px; }
+  .gnomon-dock-toggle svg { width:19px; }
+  .gnomon-dock-label { font-size:14px; }
   .guide-toggle { display:flex; align-items:center; justify-content:center; gap:5px; width:auto; min-height:44px; padding-bottom:0; font-size:14px; }
   .guide-toggle svg { width:24px; height:24px; }
   .view-controls { display:flex; gap:3px; }
