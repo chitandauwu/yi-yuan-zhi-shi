@@ -92,8 +92,37 @@
             <stop offset=".66" stop-color="var(--sky-haze)" stop-opacity=".73"/>
             <stop offset="1" stop-color="var(--sky-haze)" stop-opacity="0"/>
           </linearGradient>
+          <radialGradient id="rain-cloud">
+            <stop offset="0" stop-color="#4c6479" stop-opacity=".55"/>
+            <stop offset="1" stop-color="#4c6479" stop-opacity="0"/>
+          </radialGradient>
+          <radialGradient id="rain-mist-bank">
+            <stop offset="0" stop-color="#e3eff0" stop-opacity=".72"/>
+            <stop offset="1" stop-color="#e3eff0" stop-opacity="0"/>
+          </radialGradient>
+          <pattern id="rain-threads" width="116" height="138" patternUnits="userSpaceOnUse">
+            <path d="M19 7l-8 28M83 56l-7 25M46 111l-6 20" fill="none" stroke="#eef8fb" stroke-width="1.1" stroke-linecap="round" stroke-opacity=".30"/>
+          </pattern>
+          <linearGradient id="grain-cloud" x2="0" y2="1">
+            <stop offset="0" stop-color="#fffdf1" stop-opacity=".92"/>
+            <stop offset="1" stop-color="#fff6da" stop-opacity=".18"/>
+          </linearGradient>
+          <radialGradient id="grain-waterlight">
+            <stop offset="0" stop-color="#ffebaf" stop-opacity=".54"/>
+            <stop offset="1" stop-color="#ffebaf" stop-opacity="0"/>
+          </radialGradient>
         </defs>
         <path fill="url(#sky)" d="M0 0h1200v900H0z"/>
+        <g class="landscape-weather landscape-rain">
+          <ellipse cx="220" cy="46" rx="420" ry="151" fill="url(#rain-cloud)"/>
+          <ellipse cx="918" cy="93" rx="464" ry="144" fill="url(#rain-cloud)"/>
+          <ellipse cx="547" cy="213" rx="385" ry="48" fill="url(#rain-mist-bank)" opacity=".48"/>
+        </g>
+        <g class="landscape-weather landscape-grain" fill="url(#grain-cloud)">
+          <path d="M17 165c32-15 49-16 73-15 8-34 57-50 86-29 24-27 79-22 88 13 44-3 70 11 80 28-110 11-223 11-327 3z"/>
+          <path d="M673 108c27-12 56-13 78-12 11-19 36-29 60-16 27-10 53 3 57 28 23-3 43 4 53 14-84 4-173 1-248-14z" opacity=".75"/>
+          <path d="M1044 237c18-13 38-16 57-14 15-20 43-25 63-6 29-6 47 5 54 18-52 10-121 9-174 2z" opacity=".74"/>
+        </g>
         <g class="landscape-sun">
           <circle cx="946" cy="181" r="112" fill="url(#sun-aura)"/>
           <circle cx="946" cy="181" r="26" fill="var(--sun-disc)"/>
@@ -109,6 +138,18 @@
         <path fill="var(--bank-far)" d="M0 473c156-17 172-65 312-51 112 11 145 22 263 13-73 26-193 15-247 24-89 15-106 55-214 68-41 5-76 5-114 7zm1200-55c-147-2-248 7-348 39 132-8 181 34 348 35z"/>
         <path fill="var(--bank-near)" d="M0 687c91-29 156 1 244-17-69 42-139 57-244 61zm1200-134c-144 38-168 125-297 157-61 15-131 27-189 47 99-16 216-6 309-31 69-18 122-49 177-49zm0 306c-179-9-348 19-536 41h536z"/>
         <path class="landscape-mist" fill="url(#ridge-mist)" d="M0 345h1200v165H0z"/>
+        <g class="landscape-weather landscape-rain">
+          <ellipse cx="292" cy="391" rx="423" ry="45" fill="url(#rain-mist-bank)"/>
+          <ellipse cx="1004" cy="464" rx="416" ry="53" fill="url(#rain-mist-bank)" opacity=".82"/>
+          <ellipse cx="597" cy="612" rx="530" ry="77" fill="url(#rain-mist-bank)" opacity=".30"/>
+          <rect width="1200" height="900" fill="url(#rain-threads)" opacity=".48"/>
+        </g>
+        <g class="landscape-weather landscape-grain">
+          <ellipse cx="970" cy="550" rx="176" ry="158" fill="url(#grain-waterlight)"/>
+          <g fill="none" stroke="#fff4ca" stroke-width="2" stroke-linecap="round" opacity=".59">
+            <path d="M899 473h70m-91 22h120m-50 31h81m-115 35h132m-48 34h86"/>
+          </g>
+        </g>
         <g fill="none" stroke="var(--water-line)" stroke-linecap="round" stroke-width="1.5" opacity=".65">
           <path d="M1001 524c50-8 105-9 172-6m-113 14c36-4 59-3 83-3m-183 247c76-9 127-40 197-49m-146 62c65-13 82-27 125-34"/>
         </g>

@@ -29,14 +29,14 @@
   
   const seasonColors = {
     rain: {
-      ground: "a8a777", grass: "76be54", second: "a6da66", tree: "68b350",
-      tile: "3c707c", path: "d0c5a2", water: "68b5c2",
-      light: [1.02, 1.07, 1.01], sunTint: [1.08, 1.06, .95], shadowTint: [.75, .90, .96]
+      ground: "929c90", grass: "679a72", second: "a4c99a", tree: "6d9a7b",
+      tile: "405b69", path: "b9c4bb", water: "779eae",
+      light: [.95, 1.02, 1.08], sunTint: [.76, .88, .99], shadowTint: [.89, .97, 1.04]
     },
     grain: {
-      ground: "beb184", grass: "4c9649", second: "76bb54", tree: "429046",
-      tile: "396675", path: "d8cca8", water: "52b8b5",
-      light: [1.05, 1.04, .96], sunTint: [1.10, 1.06, .92], shadowTint: [.72, .89, .96]
+      ground: "b9b67f", grass: "429b46", second: "84c94c", tree: "318545",
+      tile: "3b6b69", path: "e1cca0", water: "45b6b4",
+      light: [1.08, 1.07, .93], sunTint: [1.20, 1.13, .86], shadowTint: [.73, .86, .96]
     },
     dew: {
       ground: "c4ac7e", grass: "a99c4a", second: "cfa84a", tree: "d65a3c",
@@ -136,8 +136,8 @@
     { x:7.27, z:8.02, scale:.61, lean:1, kind:"willow" }
   ];
   const treeLeaves = {
-    rain: ["4da142","74c24f","a1dc64","c8eb7e"],
-    grain: ["2e7c42","44984e","67b858","99d468"],
+    rain: ["6c9975","91b98a","aed0a0","d3e7b0"],
+    grain: ["246936","369048","66bc4f","9ddb61"],
     dew: ["b83c2e","d95838","ee863a","f5ba4a"]
   };
   const springBlossoms = ["ea716b","f59a8e","fbd0c6","89c960","f2857b"];
@@ -370,8 +370,8 @@
     const roofX = [-2.37,6.99];
     const profile = [[-4.62,2.62],[-4.07,2.93],[-3.41,3.34],[-2.35,4.23],[-1.26,3.31],[-.47,2.79],[.56,2.60]];
     const tileSets = {
-      rain: ["316470","3c727c","457f86","386a78","4f8a8e"],
-      grain: ["325f70","3d6d7c","477985","396678","52858f"],
+      rain: ["354e5c","405b69","4b6572","3c5462","597581"],
+      grain: ["305e60","3c7470","4c8880","386a69","62928a"],
       dew: ["2c4a6b","36577a","406386","325273","4a6e90"],
       winter: ["273f5c","304b6a","395776","2c4664","436280"]
     };
@@ -513,7 +513,7 @@
     const {left,right,near,far} = plot;
     const x = (left+right)/2, z = (near+far)/2, width = right-left, depth = far-near;
     const wet = term === "grain", tall = term === "dew";
-    const soil = {rain:"785c45",grain:"8f7d60",dew:"967f5a",winter:"806e66"}[term];
+    const soil = {rain:"71675d",grain:"90815d",dew:"967f5a",winter:"806e66"}[term];
     const soilHeight=wet ? .259 : .2745;
     mesh.box(x,(.24+soilHeight)/2,z,width,soilHeight-.24,depth,soil);
     if (term === "rain") {
@@ -523,7 +523,7 @@
           const reach = radius * (.88 + variation(i+10) * .23);
           return [px + Math.cos(angle) * reach,.281,pz + Math.sin(angle) * reach * .70];
         });
-        mesh.face(edge,"65a4b0");
+        mesh.face(edge,"829fae");
       }
     }
     for (const edge of [near,far]) {
@@ -550,7 +550,7 @@
     for (let row=0; row<8; row++) {
       const px=left+.52+row*(width-1.04)/7;
       if (!wet && !tall) {
-        mesh.box(px,.279,z,.075,.018,depth-.67,term==="rain" ? "a68a67" : "b19a74");
+        mesh.box(px,.279,z,.075,.018,depth-.67,term==="rain" ? "8b8e7d" : "b19a74");
       }
       if (wet) {
         for (let section=0;section<5;section++) {
@@ -583,6 +583,8 @@
     }
 
     const paving=term==="winter" ? ["899595","99a19d","828e8e","929b99"] :
+      term==="rain" ? ["9da99e","b2bcb3","87978e","a5b3aa"] :
+      term==="grain" ? ["cbb98b","e1cc9f","b6a47e","cfbc91"] :
       ["c1b495","cbbd9e","b1a389","bbb099"];
     // A small courtyard separates the doorway from the head of the field.
     mesh.box(x,.249,1.49,width+.37,.021,1.96,state.path,"a99b7e");
@@ -663,8 +665,10 @@
   }
 
   const sunHeading = [-.8,-.6];
-  const shadeOpacity = {rain:.52,grain:.80,dew:.84,winter:.62};
-  const hazeColor = {rain:"a4d4c6",grain:"b6e0cc",dew:"cfbda8",winter:"b8cee0"};
+  const shadeOpacity = {rain:.34,grain:.85,dew:.84,winter:.62};
+  const hazeColor = {rain:"b7cbd4",grain:"c5e6c9",dew:"cfbda8",winter:"b8cee0"};
+  // 深度雾强度、色彩饱和度：阴雨柔雾与晴夏通透感，双渲染器使用同一组参数。
+  const atmosphere = {rain:[.16,.98],grain:[.027,1.16],dew:[.05,1.11],winter:[.05,1.11]};
   const gnomon = {x:-2.45,z:1.02,base:.345,height:1.02,radius:.062};
 
   function sundialStand(mesh) {
@@ -1478,7 +1482,8 @@
     const palette=seasonColors[term];
     return {pixels,staticBase,shearX,shearZ,opacity:shadeOpacity[term],sun:unit([shearX,1,shearZ]),
       sunTint:palette.sunTint,shadowTint:palette.shadowTint,
-      haze:color(hazeColor[term]),practicalPower:[lantern,lantern*.88,term==="winter" ? 1.95 : 0]};
+      haze:color(hazeColor[term]),atmosphere:atmosphere[term],
+      practicalPower:[lantern,lantern*.88,term==="winter" ? 1.95 : 0]};
   }
 
   function practicalGlow(x,y,z,nx,ny,nz,power,farmer) {
@@ -1522,6 +1527,7 @@
       uniform vec3 sunTint;
       uniform vec3 shadowTint;
       uniform vec3 hazeTint;
+      uniform vec2 atmosphere;
       uniform vec3 shadowInfo;
       uniform vec3 practicalPower;
       uniform sampler2D shadowTexture;
@@ -1588,7 +1594,7 @@
         float contact=smoothstep(.055,.19,overhead)*(1.0-.67*smoothstep(.18,1.65,overhead));
         if (farmerPass>0.5) {
           vec3 ink = sprite.rgb*warmth*(.98-.26*shadowCoverage*shadowInfo.z-.11*contact)+lampTint(sprite.rgb,glow);
-          float mist = smoothstep(.12,.34,viewDepth)*.05;
+          float mist = smoothstep(.12,.34,viewDepth)*atmosphere.x;
           ${fragmentColor} = vec4(mix(ink,hazeTint,mist),sprite.a);
           return;
         }
@@ -1615,13 +1621,13 @@
         }
         vec3 lit = paint*warmth*(ambientLight+directLight)*textureMod;
         float luma = dot(lit,vec3(0.299,0.587,0.114));
-        lit = mix(vec3(luma),lit,1.11);
+        lit = mix(vec3(luma),lit,atmosphere.y);
         if (tint.r>.91 && tint.g>.94 && tint.b>.96) {
           vec3 snowColor = paint*mix(vec3(1.02,1.02,1.01),vec3(0.79,0.89,1.04),shadeMix*0.75);
           lit = mix(lit,snowColor,.76);
         }
         lit += lampTint(paint,glow);
-        float mist = smoothstep(.12,.34,viewDepth)*.05;
+        float mist = smoothstep(.12,.34,viewDepth)*atmosphere.x;
         ${fragmentColor} = vec4(mix(lit,hazeTint,mist),waterPass>0.5 ? ${shallowWater.opacity} : 1.0);
       }`;
     const program = gl.createProgram();
@@ -1779,7 +1785,7 @@
             const glow=practicalGlow(worldX,worldY,worldZ,nx,ny,nz,light.practicalPower,Boolean(texture));
             if (texture) {
               const brightness=.97-.29*cast-.12*contact;
-              const mist=around(0,.055,(z-.12)*.25);
+              const mist=around(0,light.atmosphere[0]*1.1,(z-.12)*light.atmosphere[0]/.20);
               const surface=waterPixels[p], opacity=z>waterDepth[p] ? shallowWater.opacity : 0;
               const tex=texture.data;
               const channels=[0,1,2].map(i =>
@@ -1792,7 +1798,7 @@
               continue;
             }
             const amb=ambient*(1-.32*contact), dir=direct*(1-cast);
-            const mist=around(0,.05,(z-.12)*.25);
+            const mist=around(0,light.atmosphere[0],(z-.12)*light.atmosphere[0]/.20);
             const fogScale=255*mist, clear=1-mist;
             const lamp=glow*clear;
             const ambMix=.36+.34*((ny+1)*.5);
@@ -1801,7 +1807,8 @@
             let g=green*(amb*(st[1]+(1-st[1])*ambMix)+dir*sn[1]);
             let b=blue*(amb*(st[2]+(1-st[2])*ambMix)+dir*sn[2]);
             const luma=r*.299+g*.587+b*.114;
-            r=luma+(r-luma)*1.11; g=luma+(g-luma)*1.11; b=luma+(b-luma)*1.11;
+            const saturation=light.atmosphere[1];
+            r=luma+(r-luma)*saturation; g=luma+(g-luma)*saturation; b=luma+(b-luma)*saturation;
             if (flake) {
               const sf=cast*.75;
               r=r*.24+vertices[i+6]*255*(1.02*(1-sf)+.79*sf)*.76;
@@ -1920,6 +1927,7 @@
       this.practicalPower = gl.getUniformLocation(program,"practicalPower");
       this.shadowInfo = gl.getUniformLocation(program,"shadowInfo");
       this.hazeTint = gl.getUniformLocation(program,"hazeTint");
+      this.atmosphere = gl.getUniformLocation(program,"atmosphere");
       this.waterPass = gl.getUniformLocation(program,"waterPass");
       this.waterTime = gl.getUniformLocation(program,"waterTime");
       this.shadowTexture = gl.createTexture();
@@ -3209,6 +3217,7 @@
       gl.uniformMatrix4fv(this.camera,false,matrix);
       gl.uniform3fv(this.shadowInfo,[this.shadows.shearX,this.shadows.shearZ,this.shadows.opacity]);
       gl.uniform3fv(this.hazeTint,this.shadows.haze);
+      gl.uniform2fv(this.atmosphere,this.shadows.atmosphere);
       gl.uniform3fv(this.warmth,this.state.light);
       gl.uniform3fv(this.sunTint,this.state.sunTint);
       gl.uniform3fv(this.shadowTint,this.state.shadowTint);
