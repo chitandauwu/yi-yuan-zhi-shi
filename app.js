@@ -926,7 +926,7 @@
       const elapsed = Math.max(0, now - startAt);
       const t = Math.min(1, elapsed / duration);
       // 五次 S 曲线：首尾速度和加速度均为零，中段集中完成旋转。
-      // 保留整段 2310ms 时间轴，直到字幕退场结束才完全落位。
+      // 保留整段 2050ms 时间轴，直到字幕退场结束才完全落位。
       const ease = t * t * t * (10 + t * (-15 + 6 * t));
       applyDialAngle(startDeg + (endDeg - startDeg) * ease);
       if (t < 1) {
@@ -942,7 +942,7 @@
   applyDialAngle(dialAngle);
 
   // 字幕与节气盘共用切换时间轴：入场、场景重建后的观赏停留、同步退场。
-  const interludeTiming = { cover: 370, hold: 1380, enter: 600, exit: 560, reveal: 680, easing: "cubic-bezier(.65,0,.35,1)" };
+  const interludeTiming = { cover: 370, hold: 1120, enter: 600, exit: 560, reveal: 680, easing: "cubic-bezier(.65,0,.35,1)" };
   interlude.style.setProperty("--interlude-exit", `${interludeTiming.exit}ms`);
   interlude.style.setProperty("--interlude-ease", interludeTiming.easing);
   let pendingIndex = null;
