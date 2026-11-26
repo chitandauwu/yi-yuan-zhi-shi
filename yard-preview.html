@@ -53,13 +53,12 @@
 }
 * { box-sizing: border-box; }
 [hidden] { display: none !important; }
-/* 雨水：烟雨青灰、柔光嫩叶；芒种：晴空暖阳、浓翠稻田。 */
 body[data-season="rain"] {
-  --accent:#c7e7db;
-  --mist-opacity:.88;
-  --sky-top:#697f94; --sky-haze:#cddfe3; --sun-disc:#d9e8ed; --ridge-far:#9bb4b9;
-  --ridge-near:#66888e; --river:#84a7b5; --bank-far:#849f96; --bank-near:#587c77;
-  --water-line:#eaf3f4; --scrim:#203840; --plinth-shadow:#354e56;
+  --accent:#daf09e;
+  --mist-opacity:.60;
+  --sky-top:#479396; --sky-haze:#e4f3d6; --sun-disc:#ffeab5; --ridge-far:#7cc3b3;
+  --ridge-near:#4da08a; --river:#68b8b3; --bank-far:#88ca95; --bank-near:#489477;
+  --scrim:#11292a; --plinth-shadow:#1d403d;
 }
 body[data-season="grain"] {
   --accent:#ffe58e;
@@ -305,7 +304,6 @@ button:focus-visible, canvas:focus-visible { outline:2px solid currentColor; out
 .landscape-sun { opacity:.75; }
 .landscape-mist { opacity:var(--mist-opacity); }
 .landscape-weather { display:none; }
-body[data-season="rain"] .landscape-rain,
 body[data-season="grain"] .landscape-grain { display:inline; }
 body[data-season="grain"] .landscape-sun { opacity:.96; }
 body[data-season="rain"] .landscape-sun,
@@ -451,7 +449,7 @@ body.harvest-mode #yard { cursor:crosshair; }
   background-size:115px 101px,173px 137px,89px 171px,257px 193px,100% 100%,100% 100%;
   transition:opacity 580ms var(--interlude-ease) 70ms, background-color 360ms ease;
 }
-.season-interlude[data-term="rain"] { --wash:#243d4e; --tint:#d9eef3; --dial-gold:#c3dbe9; }
+.season-interlude[data-term="rain"] { --wash:#112331; --tint:#d2ecea; }
 .season-interlude[data-term="grain"] { --wash:#183a2b; --tint:#f7ebbd; --dial-gold:#ffe58e; }
 .season-interlude[data-term="dew"] { --wash:#2a1d20; --tint:#f4dfba; }
 .season-interlude[data-term="winter"] { --wash:#15243b; --tint:#e2ecf5; }
@@ -1066,17 +1064,6 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
             <stop offset=".66" stop-color="var(--sky-haze)" stop-opacity=".73"/>
             <stop offset="1" stop-color="var(--sky-haze)" stop-opacity="0"/>
           </linearGradient>
-          <radialGradient id="rain-cloud">
-            <stop offset="0" stop-color="#4c6479" stop-opacity=".55"/>
-            <stop offset="1" stop-color="#4c6479" stop-opacity="0"/>
-          </radialGradient>
-          <radialGradient id="rain-mist-bank">
-            <stop offset="0" stop-color="#e3eff0" stop-opacity=".72"/>
-            <stop offset="1" stop-color="#e3eff0" stop-opacity="0"/>
-          </radialGradient>
-          <pattern id="rain-threads" width="116" height="138" patternUnits="userSpaceOnUse">
-            <path d="M19 7l-8 28M83 56l-7 25M46 111l-6 20" fill="none" stroke="#eef8fb" stroke-width="1.1" stroke-linecap="round" stroke-opacity=".30"/>
-          </pattern>
           <linearGradient id="grain-cloud" x2="0" y2="1">
             <stop offset="0" stop-color="#fffdf1" stop-opacity=".92"/>
             <stop offset="1" stop-color="#fff6da" stop-opacity=".18"/>
@@ -1087,11 +1074,6 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
           </radialGradient>
         </defs>
         <path fill="url(#sky)" d="M0 0h1200v900H0z"/>
-        <g class="landscape-weather landscape-rain">
-          <ellipse cx="220" cy="46" rx="420" ry="151" fill="url(#rain-cloud)"/>
-          <ellipse cx="918" cy="93" rx="464" ry="144" fill="url(#rain-cloud)"/>
-          <ellipse cx="547" cy="213" rx="385" ry="48" fill="url(#rain-mist-bank)" opacity=".48"/>
-        </g>
         <g class="landscape-weather landscape-grain" fill="url(#grain-cloud)">
           <path d="M17 165c32-15 49-16 73-15 8-34 57-50 86-29 24-27 79-22 88 13 44-3 70 11 80 28-110 11-223 11-327 3z"/>
           <path d="M673 108c27-12 56-13 78-12 11-19 36-29 60-16 27-10 53 3 57 28 23-3 43 4 53 14-84 4-173 1-248-14z" opacity=".75"/>
@@ -1112,12 +1094,6 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
         <path fill="var(--bank-far)" d="M0 473c156-17 172-65 312-51 112 11 145 22 263 13-73 26-193 15-247 24-89 15-106 55-214 68-41 5-76 5-114 7zm1200-55c-147-2-248 7-348 39 132-8 181 34 348 35z"/>
         <path fill="var(--bank-near)" d="M0 687c91-29 156 1 244-17-69 42-139 57-244 61zm1200-134c-144 38-168 125-297 157-61 15-131 27-189 47 99-16 216-6 309-31 69-18 122-49 177-49zm0 306c-179-9-348 19-536 41h536z"/>
         <path class="landscape-mist" fill="url(#ridge-mist)" d="M0 345h1200v165H0z"/>
-        <g class="landscape-weather landscape-rain">
-          <ellipse cx="292" cy="391" rx="423" ry="45" fill="url(#rain-mist-bank)"/>
-          <ellipse cx="1004" cy="464" rx="416" ry="53" fill="url(#rain-mist-bank)" opacity=".82"/>
-          <ellipse cx="597" cy="612" rx="530" ry="77" fill="url(#rain-mist-bank)" opacity=".30"/>
-          <rect width="1200" height="900" fill="url(#rain-threads)" opacity=".48"/>
-        </g>
         <g class="landscape-weather landscape-grain">
           <ellipse cx="970" cy="550" rx="176" ry="158" fill="url(#grain-waterlight)"/>
           <g fill="none" stroke="#fff4ca" stroke-width="2" stroke-linecap="round" opacity=".59">
@@ -1391,9 +1367,9 @@ document.getElementById("farmer-atlas").src = "data:image/webp;base64,UklGRpg7AA
   
   const seasonColors = {
     rain: {
-      ground: "929c90", grass: "679a72", second: "a4c99a", tree: "6d9a7b",
-      tile: "405b69", path: "b9c4bb", water: "779eae",
-      light: [.95, 1.02, 1.08], sunTint: [.76, .88, .99], shadowTint: [.89, .97, 1.04]
+      ground: "a8a777", grass: "76be54", second: "a6da66", tree: "68b350",
+      tile: "3c707c", path: "d0c5a2", water: "68b5c2",
+      light: [1.02, 1.07, 1.01], sunTint: [1.08, 1.06, .95], shadowTint: [.75, .90, .96]
     },
     grain: {
       ground: "b9b67f", grass: "429b46", second: "84c94c", tree: "318545",
@@ -1498,7 +1474,7 @@ document.getElementById("farmer-atlas").src = "data:image/webp;base64,UklGRpg7AA
     { x:7.27, z:8.02, scale:.61, lean:1, kind:"willow" }
   ];
   const treeLeaves = {
-    rain: ["6c9975","91b98a","aed0a0","d3e7b0"],
+    rain: ["4da142","74c24f","a1dc64","c8eb7e"],
     grain: ["246936","369048","66bc4f","9ddb61"],
     dew: ["b83c2e","d95838","ee863a","f5ba4a"]
   };
@@ -1732,7 +1708,7 @@ document.getElementById("farmer-atlas").src = "data:image/webp;base64,UklGRpg7AA
     const roofX = [-2.37,6.99];
     const profile = [[-4.62,2.62],[-4.07,2.93],[-3.41,3.34],[-2.35,4.23],[-1.26,3.31],[-.47,2.79],[.56,2.60]];
     const tileSets = {
-      rain: ["354e5c","405b69","4b6572","3c5462","597581"],
+      rain: ["316470","3c727c","457f86","386a78","4f8a8e"],
       grain: ["305e60","3c7470","4c8880","386a69","62928a"],
       dew: ["2c4a6b","36577a","406386","325273","4a6e90"],
       winter: ["273f5c","304b6a","395776","2c4664","436280"]
@@ -1875,7 +1851,7 @@ document.getElementById("farmer-atlas").src = "data:image/webp;base64,UklGRpg7AA
     const {left,right,near,far} = plot;
     const x = (left+right)/2, z = (near+far)/2, width = right-left, depth = far-near;
     const wet = term === "grain", tall = term === "dew";
-    const soil = {rain:"71675d",grain:"90815d",dew:"967f5a",winter:"806e66"}[term];
+    const soil = {rain:"785c45",grain:"90815d",dew:"967f5a",winter:"806e66"}[term];
     const soilHeight=wet ? .259 : .2745;
     mesh.box(x,(.24+soilHeight)/2,z,width,soilHeight-.24,depth,soil);
     if (term === "rain") {
@@ -1885,7 +1861,7 @@ document.getElementById("farmer-atlas").src = "data:image/webp;base64,UklGRpg7AA
           const reach = radius * (.88 + variation(i+10) * .23);
           return [px + Math.cos(angle) * reach,.281,pz + Math.sin(angle) * reach * .70];
         });
-        mesh.face(edge,"829fae");
+        mesh.face(edge,"65a4b0");
       }
     }
     for (const edge of [near,far]) {
@@ -1912,7 +1888,7 @@ document.getElementById("farmer-atlas").src = "data:image/webp;base64,UklGRpg7AA
     for (let row=0; row<8; row++) {
       const px=left+.52+row*(width-1.04)/7;
       if (!wet && !tall) {
-        mesh.box(px,.279,z,.075,.018,depth-.67,term==="rain" ? "8b8e7d" : "b19a74");
+        mesh.box(px,.279,z,.075,.018,depth-.67,term==="rain" ? "a68a67" : "b19a74");
       }
       if (wet) {
         for (let section=0;section<5;section++) {
@@ -1945,7 +1921,6 @@ document.getElementById("farmer-atlas").src = "data:image/webp;base64,UklGRpg7AA
     }
 
     const paving=term==="winter" ? ["899595","99a19d","828e8e","929b99"] :
-      term==="rain" ? ["9da99e","b2bcb3","87978e","a5b3aa"] :
       term==="grain" ? ["cbb98b","e1cc9f","b6a47e","cfbc91"] :
       ["c1b495","cbbd9e","b1a389","bbb099"];
     // A small courtyard separates the doorway from the head of the field.
@@ -2027,10 +2002,10 @@ document.getElementById("farmer-atlas").src = "data:image/webp;base64,UklGRpg7AA
   }
 
   const sunHeading = [-.8,-.6];
-  const shadeOpacity = {rain:.34,grain:.85,dew:.84,winter:.62};
-  const hazeColor = {rain:"b7cbd4",grain:"c5e6c9",dew:"cfbda8",winter:"b8cee0"};
-  // 深度雾强度、色彩饱和度：阴雨柔雾与晴夏通透感，双渲染器使用同一组参数。
-  const atmosphere = {rain:[.16,.98],grain:[.027,1.16],dew:[.05,1.11],winter:[.05,1.11]};
+  const shadeOpacity = {rain:.52,grain:.85,dew:.84,winter:.62};
+  const hazeColor = {rain:"a4d4c6",grain:"c5e6c9",dew:"cfbda8",winter:"b8cee0"};
+  // 深度雾强度、色彩饱和度：芒种保持通透明亮，双渲染器使用同一组参数。
+  const atmosphere = {rain:[.05,1.11],grain:[.027,1.16],dew:[.05,1.11],winter:[.05,1.11]};
   const gnomon = {x:-2.45,z:1.02,base:.345,height:1.02,radius:.062};
 
   function sundialStand(mesh) {

@@ -29,9 +29,9 @@
   
   const seasonColors = {
     rain: {
-      ground: "929c90", grass: "679a72", second: "a4c99a", tree: "6d9a7b",
-      tile: "405b69", path: "b9c4bb", water: "779eae",
-      light: [.95, 1.02, 1.08], sunTint: [.76, .88, .99], shadowTint: [.89, .97, 1.04]
+      ground: "a8a777", grass: "76be54", second: "a6da66", tree: "68b350",
+      tile: "3c707c", path: "d0c5a2", water: "68b5c2",
+      light: [1.02, 1.07, 1.01], sunTint: [1.08, 1.06, .95], shadowTint: [.75, .90, .96]
     },
     grain: {
       ground: "b9b67f", grass: "429b46", second: "84c94c", tree: "318545",
@@ -136,7 +136,7 @@
     { x:7.27, z:8.02, scale:.61, lean:1, kind:"willow" }
   ];
   const treeLeaves = {
-    rain: ["6c9975","91b98a","aed0a0","d3e7b0"],
+    rain: ["4da142","74c24f","a1dc64","c8eb7e"],
     grain: ["246936","369048","66bc4f","9ddb61"],
     dew: ["b83c2e","d95838","ee863a","f5ba4a"]
   };
@@ -370,7 +370,7 @@
     const roofX = [-2.37,6.99];
     const profile = [[-4.62,2.62],[-4.07,2.93],[-3.41,3.34],[-2.35,4.23],[-1.26,3.31],[-.47,2.79],[.56,2.60]];
     const tileSets = {
-      rain: ["354e5c","405b69","4b6572","3c5462","597581"],
+      rain: ["316470","3c727c","457f86","386a78","4f8a8e"],
       grain: ["305e60","3c7470","4c8880","386a69","62928a"],
       dew: ["2c4a6b","36577a","406386","325273","4a6e90"],
       winter: ["273f5c","304b6a","395776","2c4664","436280"]
@@ -513,7 +513,7 @@
     const {left,right,near,far} = plot;
     const x = (left+right)/2, z = (near+far)/2, width = right-left, depth = far-near;
     const wet = term === "grain", tall = term === "dew";
-    const soil = {rain:"71675d",grain:"90815d",dew:"967f5a",winter:"806e66"}[term];
+    const soil = {rain:"785c45",grain:"90815d",dew:"967f5a",winter:"806e66"}[term];
     const soilHeight=wet ? .259 : .2745;
     mesh.box(x,(.24+soilHeight)/2,z,width,soilHeight-.24,depth,soil);
     if (term === "rain") {
@@ -523,7 +523,7 @@
           const reach = radius * (.88 + variation(i+10) * .23);
           return [px + Math.cos(angle) * reach,.281,pz + Math.sin(angle) * reach * .70];
         });
-        mesh.face(edge,"829fae");
+        mesh.face(edge,"65a4b0");
       }
     }
     for (const edge of [near,far]) {
@@ -550,7 +550,7 @@
     for (let row=0; row<8; row++) {
       const px=left+.52+row*(width-1.04)/7;
       if (!wet && !tall) {
-        mesh.box(px,.279,z,.075,.018,depth-.67,term==="rain" ? "8b8e7d" : "b19a74");
+        mesh.box(px,.279,z,.075,.018,depth-.67,term==="rain" ? "a68a67" : "b19a74");
       }
       if (wet) {
         for (let section=0;section<5;section++) {
@@ -583,7 +583,6 @@
     }
 
     const paving=term==="winter" ? ["899595","99a19d","828e8e","929b99"] :
-      term==="rain" ? ["9da99e","b2bcb3","87978e","a5b3aa"] :
       term==="grain" ? ["cbb98b","e1cc9f","b6a47e","cfbc91"] :
       ["c1b495","cbbd9e","b1a389","bbb099"];
     // A small courtyard separates the doorway from the head of the field.
@@ -665,10 +664,10 @@
   }
 
   const sunHeading = [-.8,-.6];
-  const shadeOpacity = {rain:.34,grain:.85,dew:.84,winter:.62};
-  const hazeColor = {rain:"b7cbd4",grain:"c5e6c9",dew:"cfbda8",winter:"b8cee0"};
-  // 深度雾强度、色彩饱和度：阴雨柔雾与晴夏通透感，双渲染器使用同一组参数。
-  const atmosphere = {rain:[.16,.98],grain:[.027,1.16],dew:[.05,1.11],winter:[.05,1.11]};
+  const shadeOpacity = {rain:.52,grain:.85,dew:.84,winter:.62};
+  const hazeColor = {rain:"a4d4c6",grain:"c5e6c9",dew:"cfbda8",winter:"b8cee0"};
+  // 深度雾强度、色彩饱和度：芒种保持通透明亮，双渲染器使用同一组参数。
+  const atmosphere = {rain:[.05,1.11],grain:[.027,1.16],dew:[.05,1.11],winter:[.05,1.11]};
   const gnomon = {x:-2.45,z:1.02,base:.345,height:1.02,radius:.062};
 
   function sundialStand(mesh) {

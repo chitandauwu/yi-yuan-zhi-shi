@@ -44,13 +44,12 @@
 }
 * { box-sizing: border-box; }
 [hidden] { display: none !important; }
-/* 雨水：烟雨青灰、柔光嫩叶；芒种：晴空暖阳、浓翠稻田。 */
 body[data-season="rain"] {
-  --accent:#c7e7db;
-  --mist-opacity:.88;
-  --sky-top:#697f94; --sky-haze:#cddfe3; --sun-disc:#d9e8ed; --ridge-far:#9bb4b9;
-  --ridge-near:#66888e; --river:#84a7b5; --bank-far:#849f96; --bank-near:#587c77;
-  --water-line:#eaf3f4; --scrim:#203840; --plinth-shadow:#354e56;
+  --accent:#daf09e;
+  --mist-opacity:.60;
+  --sky-top:#479396; --sky-haze:#e4f3d6; --sun-disc:#ffeab5; --ridge-far:#7cc3b3;
+  --ridge-near:#4da08a; --river:#68b8b3; --bank-far:#88ca95; --bank-near:#489477;
+  --scrim:#11292a; --plinth-shadow:#1d403d;
 }
 body[data-season="grain"] {
   --accent:#ffe58e;
@@ -296,7 +295,6 @@ button:focus-visible, canvas:focus-visible { outline:2px solid currentColor; out
 .landscape-sun { opacity:.75; }
 .landscape-mist { opacity:var(--mist-opacity); }
 .landscape-weather { display:none; }
-body[data-season="rain"] .landscape-rain,
 body[data-season="grain"] .landscape-grain { display:inline; }
 body[data-season="grain"] .landscape-sun { opacity:.96; }
 body[data-season="rain"] .landscape-sun,
@@ -442,7 +440,7 @@ body.harvest-mode #yard { cursor:crosshair; }
   background-size:115px 101px,173px 137px,89px 171px,257px 193px,100% 100%,100% 100%;
   transition:opacity 580ms var(--interlude-ease) 70ms, background-color 360ms ease;
 }
-.season-interlude[data-term="rain"] { --wash:#243d4e; --tint:#d9eef3; --dial-gold:#c3dbe9; }
+.season-interlude[data-term="rain"] { --wash:#112331; --tint:#d2ecea; }
 .season-interlude[data-term="grain"] { --wash:#183a2b; --tint:#f7ebbd; --dial-gold:#ffe58e; }
 .season-interlude[data-term="dew"] { --wash:#2a1d20; --tint:#f4dfba; }
 .season-interlude[data-term="winter"] { --wash:#15243b; --tint:#e2ecf5; }
